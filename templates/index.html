@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vietnam Metro & Railway News</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f0f4f8;
+      color: #1a202c;
+      min-height: 100vh;
+    }
+
+    header {
+      background: linear-gradient(135deg, #d62828 0%, #a01010 100%);
+      color: white;
+      padding: 28px 24px;
+      text-align: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    header h1 { font-size: 1.8rem; font-weight: 700; }
+    header p  { margin-top: 6px; opacity: 0.85; font-size: 0.9rem; }
+
+    main { max-width: 1000px; margin: 0 auto; padding: 28px 16px; }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .refresh-btn {
+      padding: 9px 22px;
+      background: #d62828;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.88rem;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .refresh-btn:hover { background: #a01010; }
+    .refresh-btn:disabled { background: #a0aec0; cursor: not-allowed; }
+
+    .export-btn {
+      padding: 9px 22px;
+      background: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.88rem;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .export-btn:hover { background: #1d4ed8; }
+
+    /* Export modal */
+    .modal-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.45);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: white;
+      border-radius: 12px;
+      padding: 28px;
+      width: min(520px, 92vw);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    .modal h2 { font-size: 1.1rem; font-weight: 700; margin-bottom: 6px; }
+    .modal p  { font-size: 0.85rem; color: #718096; margin-bottom: 16px; }
+    .url-row {
+      display: flex; gap: 8px; align-items: center;
+    }
+    .url-box {
+      flex: 1;
+      padding: 9px 12px;
+      border: 1px solid #cbd5e0;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      color: #2d3748;
+      background: #f7fafc;
+      word-break: break-all;
+      font-family: monospace;
+    }
+    .copy-btn {
+      padding: 9px 16px;
+      background: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.2s;
+    }
+    .copy-btn:hover  { background: #1d4ed8; }
+    .copy-btn.copied { background: #059669; }
+    .open-btn {
+      display: block;
+      margin-top: 10px;
+      text-align: center;
+      padding: 8px;
+      border: 1px solid #cbd5e0;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      color: #4a5568;
+      text-decoration: none;
+      transition: background 0.15s;
+    }
+    .open-btn:hover { background: #f0f4f8; }
+    .modal-note {
+      margin-top: 14px;
+      font-size: 0.78rem;
+      color: #a0aec0;
+      border-top: 1px solid #e2e8f0;
+      padding-top: 12px;
+    }
+    .close-btn {
+      float: right;
+      background: none;
+      border: none;
+      font-size: 1.3rem;
+      cursor: pointer;
+      color: #a0aec0;
+      line-height: 1;
+      margin-top: -4px;
+    }
+    .close-btn:hover { color: #4a5568; }
+
+    .meta { font-size: 0.8rem; color: #718096; }
+
+    /* Filter pills */
+    .filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+    .pill {
+      padding: 5px 14px;
+      border-radius: 20px;
+      border: 1px solid #cbd5e0;
+      background: white;
+      font-size: 0.78rem;
+      cursor: pointer;
+      transition: all 0.15s;
+      color: #4a5568;
+    }
+    .pill.active, .pill:hover { color: white; border-color: transparent; }
+    .pill[data-cat="All"].active    { background: #2d3748; }
+    .pill[data-cat="Metro"].active  { background: #2563eb; }
+    .pill[data-cat="Railway"].active{ background: #059669; }
+    .pill[data-cat="High-Speed Rail"].active { background: #7c3aed; }
+    .pill[data-cat="Transport"].active       { background: #6b7280; }
+
+    /* Status */
+    #status {
+      text-align: center;
+      padding: 48px 20px;
+      color: #718096;
+    }
+    .spinner {
+      width: 40px; height: 40px;
+      border: 4px solid #e2e8f0;
+      border-top-color: #d62828;
+      border-radius: 50%;
+      animation: spin 0.75s linear infinite;
+      margin: 0 auto 14px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Grid */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+      gap: 18px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+    }
+    .card.hidden { display: none; }
+
+    .card-tag {
+      padding: 5px 14px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      color: white;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .lang-badge {
+      font-size: 0.65rem;
+      opacity: 0.9;
+      background: rgba(0,0,0,0.2);
+      border-radius: 4px;
+      padding: 1px 6px;
+      letter-spacing: 0;
+    }
+    .tag-Metro        { background: #2563eb; }
+    .tag-Railway      { background: #059669; }
+    .tag-High-Speed-Rail { background: #7c3aed; }
+    .tag-Transport    { background: #6b7280; }
+
+    .card-body { padding: 15px; flex: 1; display: flex; flex-direction: column; gap: 8px; }
+
+    .card-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      line-height: 1.4;
+      color: #1a202c;
+    }
+    .card-title a {
+      color: inherit;
+      text-decoration: none;
+    }
+    .card-title a:hover { text-decoration: underline; color: #d62828; }
+
+    .card-meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.74rem;
+      color: #a0aec0;
+      margin-top: auto;
+      padding-top: 8px;
+      border-top: 1px solid #f0f4f8;
+    }
+    .card-meta .loc { font-weight: 600; color: #718096; }
+
+    .error-box {
+      text-align: center;
+      padding: 28px;
+      background: #fff5f5;
+      border: 1px solid #fc8181;
+      border-radius: 8px;
+      color: #c53030;
+    }
+
+    .no-results {
+      text-align: center;
+      padding: 40px;
+      color: #718096;
+      grid-column: 1/-1;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🚇 Vietnam Metro &amp; Railway News</h1>
+  <p>Latest updates from Google News — free &amp; no API key required</p>
+</header>
+
+<main>
+  <div id="status">
+    <div class="spinner"></div>
+    <p>Fetching latest news…</p>
+  </div>
+
+  <div id="app" style="display:none">
+    <div class="toolbar">
+      <div class="filters" id="filters"></div>
+      <div style="display:flex;gap:10px;align-items:center">
+        <span class="meta" id="meta"></span>
+        <button class="export-btn" onclick="openExport()">🔗 Live Link</button>
+        <button class="refresh-btn" id="refresh-btn" onclick="loadNews()">⟳ Refresh</button>
+      </div>
+    </div>
+    <div class="grid" id="grid"></div>
+  </div>
+</main>
+
+<!-- Export modal -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeExportOnBg(event)">
+  <div class="modal">
+    <button class="close-btn" onclick="closeExport()">×</button>
+    <h2>🔗 Live JSON Feed</h2>
+    <p>Import this URL into any web service, Make, Zapier, n8n, or fetch it with any HTTP client. It always returns the latest 30 articles.</p>
+    <div class="url-row">
+      <div class="url-box" id="export-url"></div>
+      <button class="copy-btn" id="copy-btn" onclick="copyUrl()">Copy</button>
+    </div>
+    <a class="open-btn" id="open-link" href="#" target="_blank" rel="noopener">↗ Open in browser / preview JSON</a>
+    <div class="modal-note">
+      <strong>Fields per article:</strong> title, link, source, date, age, lang (vi/en), category, location<br>
+      <strong>CORS:</strong> enabled — any origin can fetch this endpoint
+    </div>
+  </div>
+</div>
+
+<script>
+  const CATS = ["All", "Metro", "Railway", "High-Speed Rail", "Transport"];
+  let activeCat = "All";
+  let allNews = [];
+
+  function tagClass(cat) {
+    return "tag-" + cat.replace(/\s+/g, "-");
+  }
+
+  function renderFilters() {
+    const el = document.getElementById("filters");
+    el.innerHTML = CATS.map(c =>
+      `<span class="pill${c === activeCat ? " active" : ""}" data-cat="${c}" onclick="setFilter('${c}')">${c}</span>`
+    ).join("");
+  }
+
+  function setFilter(cat) {
+    activeCat = cat;
+    renderFilters();
+    applyFilter();
+  }
+
+  function applyFilter() {
+    document.querySelectorAll(".card").forEach(card => {
+      const match = activeCat === "All" || card.dataset.cat === activeCat;
+      card.classList.toggle("hidden", !match);
+    });
+    const visible = document.querySelectorAll(".card:not(.hidden)").length;
+    if (visible === 0) {
+      document.getElementById("grid").insertAdjacentHTML(
+        "beforeend", `<p class="no-results">No articles in this category.</p>`);
+    }
+  }
+
+  function renderCard(item) {
+    const cls = tagClass(item.category);
+    const titleHtml = item.link
+      ? `<a href="${item.link}" target="_blank" rel="noopener">${item.title}</a>`
+      : item.title;
+    const langBadge = item.lang === "vi" ? "🇻🇳 VI" : "🇬🇧 EN";
+    return `
+      <div class="card" data-cat="${item.category}">
+        <div class="card-tag ${cls}">
+          <span>${item.category}</span>
+          <span class="lang-badge">${langBadge}</span>
+        </div>
+        <div class="card-body">
+          <div class="card-title">${titleHtml}</div>
+          <div class="card-meta">
+            <span class="loc">📍 ${item.location}</span>
+            <span>${item.source ? item.source + " · " : ""}${item.age || item.date}</span>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  async function loadNews() {
+    const status  = document.getElementById("status");
+    const appDiv  = document.getElementById("app");
+    const grid    = document.getElementById("grid");
+    const btn     = document.getElementById("refresh-btn");
+
+    status.style.display = "block";
+    appDiv.style.display = "none";
+    grid.innerHTML = "";
+    btn.disabled = true;
+
+    try {
+      const res  = await fetch("/api/news");
+      const data = await res.json();
+
+      if (data.status !== "success") throw new Error(data.message);
+
+      allNews = data.news;
+      grid.innerHTML = allNews.map(renderCard).join("");
+
+      const now = new Date().toLocaleTimeString();
+      const vi = allNews.filter(a => a.lang === "vi").length;
+      const en = allNews.filter(a => a.lang === "en").length;
+      document.getElementById("meta").textContent =
+        `${allNews.length} articles (🇻🇳 ${vi} · 🇬🇧 ${en}) · updated ${now}`;
+
+      renderFilters();
+      applyFilter();
+
+      status.style.display = "none";
+      appDiv.style.display = "block";
+    } catch (err) {
+      status.innerHTML = `<div class="error-box"><strong>Error:</strong> ${err.message}</div>`;
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  function openExport() {
+    const url = window.location.origin + "/api/export";
+    document.getElementById("export-url").textContent = url;
+    document.getElementById("open-link").href = url;
+    document.getElementById("copy-btn").textContent = "Copy";
+    document.getElementById("copy-btn").classList.remove("copied");
+    document.getElementById("modal-overlay").classList.add("open");
+  }
+
+  function closeExport() {
+    document.getElementById("modal-overlay").classList.remove("open");
+  }
+
+  function closeExportOnBg(e) {
+    if (e.target === document.getElementById("modal-overlay")) closeExport();
+  }
+
+  function copyUrl() {
+    const url = document.getElementById("export-url").textContent;
+    navigator.clipboard.writeText(url).then(() => {
+      const btn = document.getElementById("copy-btn");
+      btn.textContent = "Copied!";
+      btn.classList.add("copied");
+      setTimeout(() => { btn.textContent = "Copy"; btn.classList.remove("copied"); }, 2000);
+    });
+  }
+
+  loadNews();
+</script>
+</body>
+</html>
