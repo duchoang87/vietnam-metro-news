@@ -152,11 +152,10 @@
       color: #4a5568;
     }
     .pill.active, .pill:hover { color: white; border-color: transparent; }
-    .pill[data-cat="All"].active    { background: #2d3748; }
-    .pill[data-cat="Metro"].active  { background: #2563eb; }
-    .pill[data-cat="Railway"].active{ background: #059669; }
-    .pill[data-cat="High-Speed Rail"].active { background: #7c3aed; }
-    .pill[data-cat="Transport"].active       { background: #6b7280; }
+    .pill[data-cat="All"].active      { background: #2d3748; }
+    .pill[data-cat="Metro"].active    { background: #2563eb; }
+    .pill[data-cat="Railway"].active  { background: #059669; }
+    .pill[data-cat="Transport"].active{ background: #6b7280; }
 
     /* Status */
     #status {
@@ -217,7 +216,6 @@
     }
     .tag-Metro        { background: #2563eb; }
     .tag-Railway      { background: #059669; }
-    .tag-High-Speed-Rail { background: #7c3aed; }
     .tag-Transport    { background: #6b7280; }
 
     .card-body { padding: 15px; flex: 1; display: flex; flex-direction: column; gap: 8px; }
@@ -292,22 +290,28 @@
 <div class="modal-overlay" id="modal-overlay" onclick="closeExportOnBg(event)">
   <div class="modal">
     <button class="close-btn" onclick="closeExport()">×</button>
-    <h2>🔗 Live JSON Feed</h2>
-    <p>Import this URL into any web service, Make, Zapier, n8n, or fetch it with any HTTP client. It always returns the latest 30 articles.</p>
-    <div class="url-row">
-      <div class="url-box" id="export-url"></div>
-      <button class="copy-btn" id="copy-btn" onclick="copyUrl()">Copy</button>
+    <h2>🔗 Content Snapshot Link</h2>
+    <p id="modal-desc">Generates a unique URL containing all 30 articles as they are right now — frozen in time. Import into Make, Zapier, n8n, or any HTTP client.</p>
+    <div id="modal-generating" style="display:none;text-align:center;padding:16px 0;color:#718096;font-size:0.88rem">
+      <div class="spinner" style="width:28px;height:28px;border-width:3px;margin-bottom:8px"></div>
+      Fetching articles &amp; creating snapshot…
     </div>
-    <a class="open-btn" id="open-link" href="#" target="_blank" rel="noopener">↗ Open in browser / preview JSON</a>
+    <div id="modal-result" style="display:none">
+      <div class="url-row">
+        <div class="url-box" id="export-url"></div>
+        <button class="copy-btn" id="copy-btn" onclick="copyUrl()">Copy</button>
+      </div>
+      <a class="open-btn" id="open-link" href="#" target="_blank" rel="noopener">↗ Open / preview JSON in browser</a>
+    </div>
     <div class="modal-note">
       <strong>Fields per article:</strong> title, link, source, date, age, lang (vi/en), category, location<br>
-      <strong>CORS:</strong> enabled — any origin can fetch this endpoint
+      <strong>Note:</strong> snapshot stays valid until the server restarts · CORS enabled
     </div>
   </div>
 </div>
 
 <script>
-  const CATS = ["All", "Metro", "Railway", "High-Speed Rail", "Transport"];
+  const CATS = ["All", "Metro", "Railway", "Transport"];
   let activeCat = "All";
   let allNews = [];
 
@@ -400,13 +404,27 @@
     }
   }
 
-  function openExport() {
-    const url = window.location.origin + "/api/export";
-    document.getElementById("export-url").textContent = url;
-    document.getElementById("open-link").href = url;
+  async function openExport() {
+    // Reset modal state
+    document.getElementById("modal-result").style.display = "none";
+    document.getElementById("modal-generating").style.display = "block";
     document.getElementById("copy-btn").textContent = "Copy";
     document.getElementById("copy-btn").classList.remove("copied");
     document.getElementById("modal-overlay").classList.add("open");
+
+    try {
+      const res  = await fetch("/api/snapshot", { method: "POST" });
+      const data = await res.json();
+      if (data.status !== "success") throw new Error(data.message);
+
+      document.getElementById("export-url").textContent = data.url;
+      document.getElementById("open-link").href = data.url;
+      document.getElementById("modal-generating").style.display = "none";
+      document.getElementById("modal-result").style.display = "block";
+    } catch (err) {
+      document.getElementById("modal-generating").innerHTML =
+        `<span style="color:#c53030">Error: ${err.message}</span>`;
+    }
   }
 
   function closeExport() {
