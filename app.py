@@ -147,7 +147,7 @@ def categorize(title):
         "bac nam","lien vung","thong nhat","lao cai","hai phong",
     ]):
         return "Railway"
-    return "Transport"
+    return "Railway"
 
 
 def locate(title):

@@ -152,10 +152,9 @@
       color: #4a5568;
     }
     .pill.active, .pill:hover { color: white; border-color: transparent; }
-    .pill[data-cat="All"].active      { background: #2d3748; }
-    .pill[data-cat="Metro"].active    { background: #2563eb; }
-    .pill[data-cat="Railway"].active  { background: #059669; }
-    .pill[data-cat="Transport"].active{ background: #6b7280; }
+    .pill[data-cat="All"].active    { background: #2d3748; }
+    .pill[data-cat="Metro"].active  { background: #2563eb; }
+    .pill[data-cat="Railway"].active{ background: #059669; }
 
     /* Status */
     #status {
@@ -214,9 +213,8 @@
       padding: 1px 6px;
       letter-spacing: 0;
     }
-    .tag-Metro        { background: #2563eb; }
-    .tag-Railway      { background: #059669; }
-    .tag-Transport    { background: #6b7280; }
+    .tag-Metro  { background: #2563eb; }
+    .tag-Railway{ background: #059669; }
 
     .card-body { padding: 15px; flex: 1; display: flex; flex-direction: column; gap: 8px; }
 
@@ -264,7 +262,6 @@
 
 <header>
   <h1>🚇 Vietnam Metro &amp; Railway News</h1>
-  <p>Latest updates from Google News — free &amp; no API key required</p>
 </header>
 
 <main>
@@ -311,7 +308,7 @@
 </div>
 
 <script>
-  const CATS = ["All", "Metro", "Railway", "Transport"];
+  const CATS = ["All", "Metro", "Railway"];
   let activeCat = "All";
   let allNews = [];
 
