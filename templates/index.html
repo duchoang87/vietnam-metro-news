@@ -487,35 +487,37 @@
 
     const VI_KW = [
       // Metro & tàu điện ngầm
-      "metro", "mrt", "tàu điện", "tàu điện ngầm", "đường sắt đô thị",
-      "bến thành", "suối tiến", "nhổn", "cát linh", "ga metro", "hầm metro",
-      "trạm metro", "nhà ga metro", "ga ngầm", "ga trên cao", "tuyến metro",
-      // Đường sắt quốc gia & vùng
-      "đường sắt", "đường ray", "tàu hỏa", "tàu cao tốc", "tàu chạy thử",
-      "đường sắt cao tốc", "đường sắt nhẹ", "đường sắt quốc gia",
-      "đường sắt liên vùng", "đường sắt tốc độ cao",
-      "dự án đường sắt", "đường sắt Bắc Nam", "đường sắt 350",
-      "đường sắt 1.435", "đường sắt khổ tiêu chuẩn", "đường sắt liên vận",
-      // Ga & nhà ga
-      "ga đường sắt", "ga hà nội", "ga sài gòn", "ga hành khách",
-      // Tốc độ cao Bắc-Nam (chủ đề nóng 2024-2025)
-      "tốc độ cao", "Bắc - Nam", "MAUR", "Ban Quản lý đường sắt",
-      // Hạ tầng kỹ thuật
-      "TOD", "depot", "khu depot", "đầu máy toa xe",
-      "tuyến số",
+      "metro", "mrt", "tàu điện ngầm", "đường sắt đô thị",
+      "bến thành", "suối tiên", "nhổn", "cát linh",
+      "ga metro", "hầm metro", "trạm metro", "nhà ga metro",
+      "ga ngầm", "ga trên cao", "tuyến metro", "tuyến metro số",
+      // Đường sắt & cao tốc Bắc - Nam
+      "đường sắt", "tàu cao tốc",
+      "đường sắt cao tốc", "đường sắt tốc độ cao", "đường sắt nhẹ",
+      "đường sắt Bắc Nam", "đường sắt Bắc-Nam",
+      "đường sắt khổ tiêu chuẩn", "đường sắt liên vận",
+      "đường sắt liên vùng", "đường sắt quốc gia",
+      "dự án đường sắt",
+      // Cơ quan quản lý / chủ đầu tư
+      "MAUR", "VNR", "Ban Quản lý đường sắt", "Tổng công ty Đường sắt",
+      // Hạ tầng & xây dựng
+      "TOD", "khu depot", "đầu máy toa xe", "chạy thử",
     ];
     const EN_KW = [
-      // Metro & rail
-      "metro", "railway", "rail line", "rail project", "rail network",
+      // Metro & rail systems
+      "metro", "mrt", "railway", "subway",
+      "rail line", "rail link", "rail project", "rail network",
       "metro line", "metro station", "metro system", "metro construction",
-      "high-speed rail", "high speed rail", "mrt", "subway", "underground",
-      "light rail", "lrt", "tram", "monorail", "hyperloop",
-      // Transit
-      "mass transit", "public transit", "urban transit", "rapid transit",
+      // High-speed & long-distance
+      "high-speed rail", "high speed rail", "high-speed train",
+      "north-south rail", "north-south railway", "bullet train",
+      // Light rail / mono
+      "light rail", "lrt", "monorail",
+      // Transit infrastructure
       "transit project", "transit system", "transit infrastructure",
-      "commuter rail", "passenger rail", "rail investment", "rail corridor",
-      // Other
-      "rolling stock", "bullet train",
+      "commuter rail", "passenger rail",
+      // Investment & development
+      "rail investment", "rail corridor", "rolling stock",
       "transit-oriented development",
     ];
 
@@ -541,7 +543,7 @@
 
     function locate(title, lang) {
       const t = title.toLowerCase();
-      if (["ho chi minh", "hcmc", "saigon", "sài gòn", "tphcm", "tp.hcm", "bến thành", "suối tiến"]
+      if (["ho chi minh", "hcmc", "saigon", "sài gòn", "tphcm", "tp.hcm", "bến thành", "suối tiên"]
         .some(k => t.includes(k))) return "Ho Chi Minh City";
       if (["hanoi", "hà nội", "cát linh", "nhổn"].some(k => t.includes(k))) return "Hanoi";
       if (["đà nẵng", "da nang"].some(k => t.includes(k))) return "Da Nang";
