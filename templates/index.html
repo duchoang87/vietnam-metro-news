@@ -287,8 +287,9 @@
   // Config
   // -------------------------------------------------------------------------
 
-  const CORS_PROXY    = "https://api.allorigins.win/get?url=";
-  const CORS_FALLBACK = "https://corsproxy.io/?";   // used if primary proxy fails
+  // Dùng Flask server làm RSS proxy (/proxy?url=...) — cùng origin,
+  // không cần CORS proxy ngoài, không bị AdBlock chặn.
+  const RSS_PROXY = "/proxy?url=";
 
   const FEEDS = [
     { url: "https://vnexpress.net/rss/thoi-su.rss",    lang: "vi", src: "VnExpress"   },
@@ -358,24 +359,19 @@
   }
 
   // -------------------------------------------------------------------------
-  // RSS fetch via CORS proxy
+  // RSS fetch via Flask proxy (/proxy?url=...)
   // -------------------------------------------------------------------------
 
-  async function fetchXml(url) {
-    // Try primary proxy (allorigins.win returns {contents: "<xml>..."})
+  async function fetchFeed(feed) {
     try {
-      const res = await fetch(CORS_PROXY + encodeURIComponent(url), { signal: AbortSignal.timeout(12000) });
-      const json = await res.json();
-      if (json && json.contents) return json.contents;
-    } catch (_) {}
-
-    // Fallback: corsproxy.io passes the response through directly
-    try {
-      const res = await fetch(CORS_FALLBACK + encodeURIComponent(url), { signal: AbortSignal.timeout(12000) });
-      if (res.ok) return await res.text();
-    } catch (_) {}
-
-    return null;
+      const res = await fetch(RSS_PROXY + encodeURIComponent(feed.url),
+                              { signal: AbortSignal.timeout(15000) });
+      if (!res.ok) return [];
+      const xmlText = await res.text();
+      return parseItems(xmlText, feed);
+    } catch (_) {
+      return [];
+    }
   }
 
   function parseItems(xmlText, feed) {
@@ -386,22 +382,15 @@
       return [...doc.querySelectorAll("item")].map(item => {
         const title   = item.querySelector("title")?.textContent?.trim() || "";
         const pubDate = item.querySelector("pubDate")?.textContent?.trim() || "";
-        // <link> in RSS is a text node sibling, not an element attribute
+        // <link> in RSS is often a text node (not an attribute)
         let link = "";
         const linkEl = item.querySelector("link");
         if (linkEl) link = linkEl.textContent?.trim() || linkEl.getAttribute("href") || "";
-
         return { title, link, pubDate, source: feed.src, lang: feed.lang };
       }).filter(a => a.title && isRelevant(a.title, feed.lang));
     } catch (_) {
       return [];
     }
-  }
-
-  async function fetchFeed(feed) {
-    const xml = await fetchXml(feed.url);
-    if (!xml) return [];
-    return parseItems(xml, feed);
   }
 
   // -------------------------------------------------------------------------
