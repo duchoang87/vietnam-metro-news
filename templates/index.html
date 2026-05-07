@@ -444,13 +444,13 @@
     const CACHE_MAX_DAYS = 45;
 
     const FEEDS = [
-      // ---- Section giao thông chuyên biệt — tỉ lệ match cao nhất (VI) ----
-      { url: "https://vnexpress.net/rss/giao-thong.rss",     lang: "vi", src: "VnExpress"    },
-      { url: "https://tuoitre.vn/rss/giao-thong.rss",        lang: "vi", src: "Tuổi Trẻ"    },
-      { url: "https://dantri.com.vn/giao-thong.rss",         lang: "vi", src: "Dân Trí"     },
-      { url: "https://thanhnien.vn/rss/xe.rss",              lang: "vi", src: "Thanh Niên"   },
-      { url: "https://vtv.vn/giao-thong.rss",                lang: "vi", src: "VTV"          },
-      { url: "https://nld.com.vn/rss/giao-thong.rss",        lang: "vi", src: "Người LĐ"    },
+      // ---- Section giao thông chuyên biệt — hiển thị toàn bộ (noFilter) ----
+      { url: "https://vnexpress.net/rss/giao-thong.rss",     lang: "vi", src: "VnExpress",  noFilter: true },
+      { url: "https://tuoitre.vn/rss/giao-thong.rss",        lang: "vi", src: "Tuổi Trẻ",  noFilter: true },
+      { url: "https://dantri.com.vn/giao-thong.rss",         lang: "vi", src: "Dân Trí",   noFilter: true },
+      { url: "https://thanhnien.vn/rss/xe.rss",              lang: "vi", src: "Thanh Niên", noFilter: true },
+      { url: "https://vtv.vn/giao-thong.rss",                lang: "vi", src: "VTV",        noFilter: true },
+      { url: "https://nld.com.vn/rss/giao-thong.rss",        lang: "vi", src: "Người LĐ",  noFilter: true },
       // ---- Báo tổng hợp — thời sự & kinh tế (VI) ----
       { url: "https://vnexpress.net/rss/thoi-su.rss",        lang: "vi", src: "VnExpress"    },
       { url: "https://vnexpress.net/rss/kinh-te.rss",        lang: "vi", src: "VnExpress"    },
@@ -606,7 +606,7 @@
           const linkEl = item.querySelector("link");
           if (linkEl) link = linkEl.textContent?.trim() || linkEl.getAttribute("href") || "";
           return { title, link, pubDate, source: feed.src, lang: feed.lang };
-        }).filter(a => a.title && isRelevant(a.title, feed.lang, feed.src));
+        }).filter(a => a.title && (feed.noFilter || isRelevant(a.title, feed.lang, feed.src)));
       } catch (_) {
         return [];
       }
@@ -687,7 +687,7 @@
           <div class="card-title">${titleHtml}</div>
           <div class="card-meta">
             <span class="loc">📍 ${item.location}</span>
-            <span>${item.source ? item.source + " · " : ""}${item.age || item.date}</span>
+            <span>${item.source ? item.source + " · " : ""}${item.age || item.date || "—"}</span>
           </div>
         </div>
       </div>`;
