@@ -616,8 +616,9 @@
     }
 
     function mergeWithCache(fresh) {
-      const cutoff = Date.now() - CACHE_MAX_DAYS * 86400000;
-      const cached = loadCache().filter(a => new Date(a.pubDate) > cutoff);
+      // Load ALL cached articles — no date expiry on read.
+      // Articles age out naturally when pushed past the 150-article cap.
+      const cached = loadCache();
       const seen = new Set(fresh.map(a => a.title.toLowerCase().slice(0, 60).replace(/\s+/g, " ")));
       const merged = [...fresh, ...cached.filter(a => {
         const key = a.title.toLowerCase().slice(0, 60).replace(/\s+/g, " ");
@@ -625,7 +626,16 @@
         seen.add(key);
         return true;
       })];
-      merged.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
+      // Sort newest-first; push articles with missing/invalid dates to the end
+      merged.sort((a, b) => {
+        const da = new Date(a.pubDate), db = new Date(b.pubDate);
+        const va = !isNaN(da.getTime()), vb = !isNaN(db.getTime());
+        if (!va && !vb) return 0;
+        if (!va) return 1;
+        if (!vb) return -1;
+        return db - da;
+      });
+      // Cap storage: keep newest 150 (oldest naturally drop out over time)
       localStorage.setItem(CACHE_KEY, JSON.stringify(merged.slice(0, 150)));
       return merged;
     }
