@@ -45,6 +45,16 @@ _ALLOWED_HOSTS = {
     "mt.gov.vn",
     "moc.gov.vn",
     "mof.gov.vn",
+    # Vietnamese local newspapers
+    "hanoimoi.vn",
+    "baodanang.vn",
+    "baoquangninh.vn",
+    "baohaiphong.vn",
+    "baodongnai.com.vn",
+    "baobinhduong.vn",
+    "baonghean.vn",
+    "huengaynay.vn",
+    "baokhanhhoa.vn",
     # International development organisations
     "aiib.org",
     "adb.org",
