@@ -440,6 +440,8 @@
     // Dùng Flask server làm RSS proxy (/proxy?url=...) — cùng origin,
     // không cần CORS proxy ngoài, không bị AdBlock chặn.
     const RSS_PROXY = "/proxy?url=";
+    const CACHE_KEY = "vn_metro_v1";
+    const CACHE_MAX_DAYS = 45;
 
     const FEEDS = [
       // ---- Section giao thông chuyên biệt — tỉ lệ match cao nhất (VI) ----
@@ -598,6 +600,29 @@
     }
 
     // -------------------------------------------------------------------------
+    // localStorage cache — accumulates articles across visits
+    // -------------------------------------------------------------------------
+
+    function loadCache() {
+      try { return JSON.parse(localStorage.getItem(CACHE_KEY) || "[]"); } catch { return []; }
+    }
+
+    function mergeWithCache(fresh) {
+      const cutoff = Date.now() - CACHE_MAX_DAYS * 86400000;
+      const cached = loadCache().filter(a => new Date(a.pubDate) > cutoff);
+      const seen = new Set(fresh.map(a => a.title.toLowerCase().slice(0, 60).replace(/\s+/g, " ")));
+      const merged = [...fresh, ...cached.filter(a => {
+        const key = a.title.toLowerCase().slice(0, 60).replace(/\s+/g, " ");
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })];
+      merged.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
+      localStorage.setItem(CACHE_KEY, JSON.stringify(merged.slice(0, 150)));
+      return merged;
+    }
+
+    // -------------------------------------------------------------------------
     // Main load
     // -------------------------------------------------------------------------
 
@@ -679,9 +704,10 @@
         // Sort newest-first
         enriched.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
 
-        // Cap VI + EN separately
-        const vi = enriched.filter(a => a.lang === "vi").slice(0, MAX_VI);
-        const en = enriched.filter(a => a.lang === "en").slice(0, MAX_EN);
+        // Merge với localStorage cache để tích lũy bài qua nhiều lần truy cập
+        const merged = mergeWithCache(enriched);
+        const vi = merged.filter(a => a.lang === "vi").slice(0, MAX_VI);
+        const en = merged.filter(a => a.lang === "en").slice(0, MAX_EN);
         allNews = [...vi, ...en];
 
         if (!allNews.length) throw new Error("No relevant articles found. Try again later.");
