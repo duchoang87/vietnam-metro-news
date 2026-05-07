@@ -52,15 +52,15 @@ def _get_url(url):
     # Try urllib (production / any Python with working SSL)
     try:
         req = urllib.request.Request(url, headers={"User-Agent": _UA})
-        with urllib.request.urlopen(req, timeout=15) as r:
+        with urllib.request.urlopen(req, timeout=5) as r:
             return r.read().decode("utf-8", errors="replace")
     except Exception:
         pass
     # Fallback: curl subprocess (handles broken SSL in local Anaconda 3.8)
     try:
         proc = subprocess.run(
-            ["curl", "-sL", url, "--max-time", "15", "-H", f"User-Agent: {_UA}"],
-            capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=20,
+            ["curl", "-sL", url, "--max-time", "5", "-H", f"User-Agent: {_UA}"],
+            capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=8,
         )
         if proc.returncode == 0 and proc.stdout.strip():
             return proc.stdout
@@ -193,7 +193,16 @@ def sort_key(a):
     return dt.astimezone(timezone.utc) if dt else datetime.min.replace(tzinfo=timezone.utc)
 
 
+_cached_news = []
+_last_fetch_time = None
+CACHE_TTL = 300 # 5 minutes
+
 def get_news():
+    global _cached_news, _last_fetch_time
+    now = datetime.now(timezone.utc)
+    if _cached_news and _last_fetch_time and (now - _last_fetch_time).total_seconds() < CACHE_TTL:
+        return _cached_news
+
     cutoff = datetime.now(timezone.utc) - timedelta(days=MAX_AGE_DAYS)
     seen   = set()
     vi = _collect(VI_QUERIES, "vi", MAX_VI, cutoff, seen)
@@ -201,6 +210,9 @@ def get_news():
     results = vi + en
     for a in results:
         a.pop("dt", None)
+        
+    _cached_news = results
+    _last_fetch_time = now
     return results
 
 
