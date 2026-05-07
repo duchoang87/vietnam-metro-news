@@ -573,7 +573,7 @@
     function formatDate(dateStr) {
       if (!dateStr) return "";
       const d = new Date(dateStr);
-      if (isNaN(d)) return dateStr.slice(0, 16);
+      if (isNaN(d) || d.getFullYear() < 2000) return "";
       return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
     }
 
