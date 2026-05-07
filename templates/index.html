@@ -445,41 +445,41 @@
 
     const FEEDS = [
       // ---- Section giao thông chuyên biệt — tỉ lệ match cao nhất (VI) ----
-      { url: "https://vnexpress.net/rss/giao-thong.rss",     lang: "vi", src: "VnExpress"    },
-      { url: "https://tuoitre.vn/rss/giao-thong.rss",        lang: "vi", src: "Tuổi Trẻ"    },
-      { url: "https://dantri.com.vn/giao-thong.rss",         lang: "vi", src: "Dân Trí"     },
-      { url: "https://thanhnien.vn/rss/xe.rss",              lang: "vi", src: "Thanh Niên"   },
-      { url: "https://vtv.vn/giao-thong.rss",                lang: "vi", src: "VTV"          },
-      { url: "https://nld.com.vn/rss/giao-thong.rss",        lang: "vi", src: "Người LĐ"    },
+      { url: "https://vnexpress.net/rss/giao-thong.rss", lang: "vi", src: "VnExpress" },
+      { url: "https://tuoitre.vn/rss/giao-thong.rss", lang: "vi", src: "Tuổi Trẻ" },
+      { url: "https://dantri.com.vn/giao-thong.rss", lang: "vi", src: "Dân Trí" },
+      { url: "https://thanhnien.vn/rss/xe.rss", lang: "vi", src: "Thanh Niên" },
+      { url: "https://vtv.vn/giao-thong.rss", lang: "vi", src: "VTV" },
+      { url: "https://nld.com.vn/rss/giao-thong.rss", lang: "vi", src: "Người LĐ" },
       // ---- Báo tổng hợp — thời sự & kinh tế (VI) ----
-      { url: "https://vnexpress.net/rss/thoi-su.rss",        lang: "vi", src: "VnExpress"    },
-      { url: "https://vnexpress.net/rss/kinh-te.rss",        lang: "vi", src: "VnExpress"    },
-      { url: "https://tuoitre.vn/rss/thoi-su.rss",           lang: "vi", src: "Tuổi Trẻ"    },
-      { url: "https://tuoitre.vn/rss/kinh-te.rss",           lang: "vi", src: "Tuổi Trẻ"    },
-      { url: "https://thanhnien.vn/rss/home.rss",            lang: "vi", src: "Thanh Niên"   },
-      { url: "https://vtv.vn/trong-nuoc.rss",                lang: "vi", src: "VTV"          },
-      { url: "https://dantri.com.vn/xa-hoi.rss",             lang: "vi", src: "Dân Trí"     },
-      { url: "https://www.sggp.org.vn/rss/kinhte-89.rss",   lang: "vi", src: "SGGP"         },
+      { url: "https://vnexpress.net/rss/thoi-su.rss", lang: "vi", src: "VnExpress" },
+      { url: "https://vnexpress.net/rss/kinh-te.rss", lang: "vi", src: "VnExpress" },
+      { url: "https://tuoitre.vn/rss/thoi-su.rss", lang: "vi", src: "Tuổi Trẻ" },
+      { url: "https://tuoitre.vn/rss/kinh-te.rss", lang: "vi", src: "Tuổi Trẻ" },
+      { url: "https://thanhnien.vn/rss/home.rss", lang: "vi", src: "Thanh Niên" },
+      { url: "https://vtv.vn/trong-nuoc.rss", lang: "vi", src: "VTV" },
+      { url: "https://dantri.com.vn/xa-hoi.rss", lang: "vi", src: "Dân Trí" },
+      { url: "https://www.sggp.org.vn/rss/kinhte-89.rss", lang: "vi", src: "SGGP" },
       // ---- Báo tài chính / đầu tư (VI) ----
-      { url: "https://cafef.vn/home.rss",                    lang: "vi", src: "CafeF"        },
-      { url: "https://baodautu.vn/trang-chu.rss",            lang: "vi", src: "Báo Đầu Tư"  },
-      { url: "https://kinhtedothi.vn/rss.rss",               lang: "vi", src: "KT&ĐT"       },
+      { url: "https://cafef.vn/home.rss", lang: "vi", src: "CafeF" },
+      { url: "https://baodautu.vn/trang-chu.rss", lang: "vi", src: "Báo Đầu Tư" },
+      { url: "https://kinhtedothi.vn/rss.rss", lang: "vi", src: "KT&ĐT" },
       // ---- Báo chính phủ / nhà nước (VI) ----
-      { url: "https://baochinhphu.vn/rss/",                  lang: "vi", src: "Báo CP"       },
+      { url: "https://baochinhphu.vn/rss/", lang: "vi", src: "Báo CP" },
       // ---- Báo địa phương — các tỉnh/thành có dự án metro & đường sắt (VI) ----
-      { url: "https://hanoimoi.vn/rss/trang-chu",            lang: "vi", src: "Hà Nội Mới"   },
-      { url: "https://baodanang.vn/rss/trang-chu",           lang: "vi", src: "Báo Đà Nẵng"  },
+      { url: "https://hanoimoi.vn/rss/trang-chu", lang: "vi", src: "Hà Nội Mới" },
+      { url: "https://baodanang.vn/rss/trang-chu", lang: "vi", src: "Báo Đà Nẵng" },
       { url: "https://baoquangninh.vn/rss/news/chinh-tri.rss", lang: "vi", src: "Quảng Ninh" },
-      { url: "https://baohaiphong.vn/rss",                   lang: "vi", src: "Hải Phòng"    },
-      { url: "https://baodongnai.com.vn/rss",                lang: "vi", src: "Đồng Nai"     },
+      { url: "https://baohaiphong.vn/rss", lang: "vi", src: "Hải Phòng" },
+      { url: "https://baodongnai.com.vn/rss", lang: "vi", src: "Đồng Nai" },
       // ---- Báo tiếng Anh trong nước ----
-      { url: "https://e.vnexpress.net/rss/news.rss",         lang: "en", src: "VnExpress EN" },
-      { url: "https://e.vnexpress.net/rss/business.rss",     lang: "en", src: "VnExpress EN" },
-      { url: "https://e.vnexpress.net/rss/travel.rss",       lang: "en", src: "VnExpress EN" },
+      { url: "https://e.vnexpress.net/rss/news.rss", lang: "en", src: "VnExpress EN" },
+      { url: "https://e.vnexpress.net/rss/business.rss", lang: "en", src: "VnExpress EN" },
+      { url: "https://e.vnexpress.net/rss/travel.rss", lang: "en", src: "VnExpress EN" },
       // ---- Tổ chức phát triển quốc tế (EN) ----
-      { url: "https://www.aiib.org/en/rss/aiib-news-rss.xml",              lang: "en", src: "AIIB" },
+      { url: "https://www.aiib.org/en/rss/aiib-news-rss.xml", lang: "en", src: "AIIB" },
       { url: "https://www.aiib.org/en/rss/aiib-projects-approved-rss.xml", lang: "en", src: "AIIB" },
-      { url: "https://www.adb.org/news.rss",                 lang: "en", src: "ADB"          },
+      { url: "https://www.adb.org/news.rss", lang: "en", src: "ADB" },
     ];
 
     const MAX_VI = 20;
@@ -488,38 +488,26 @@
     const VI_KW = [
       // Metro & tàu điện
       "metro", "mrt", "tàu điện", "tàu điện ngầm", "đường sắt đô thị",
-      "bến thành", "suối tiến", "nhổn", "cát linh", "ga metro", "hầm metro",
+      "ga metro", "hầm metro",
       "trạm metro", "nhà ga metro", "ga ngầm", "ga trên cao", "tuyến metro",
       // Đường sắt
-      "đường sắt", "đường ray", "đường sắt cao tốc", "đường sắt nhẹ",
+      "đường sắt", "đường sắt cao tốc", "đường sắt nhẹ",
       "đường sắt quốc gia", "đường sắt liên vùng", "đường sắt tốc độ cao",
-      "tàu cao tốc", "tàu chạy thử", "tàu hỏa", "dự án đường sắt",
-      // Hạ tầng & đầu tư
-      "hạ tầng giao thông", "dự án giao thông", "đầu tư hạ tầng",
-      "công trình giao thông", "vốn đầu tư giao thông", "vốn ODA giao thông",
-      // Tốc độ cao & liên vùng
-      "tốc độ cao", "liên vùng", "kết nối liên vùng",
+      "dự án đường sắt",
       // Khác
-      "TOD", "depot", "khu depot", "đầu máy toa xe", "cầu cạn",
-      "vận tải công cộng", "giao thông đô thị", "vận hành thương mại",
-      "BRT", "xe buýt nhanh", "tuyến số",
+      "TOD",
     ];
     const EN_KW = [
       // Metro & rail
       "metro", "railway", "rail line", "rail project", "rail network",
       "metro line", "metro station", "metro system", "metro construction",
-      "high-speed rail", "high speed rail", "mrt", "subway", "underground",
-      "light rail", "lrt", "tram", "monorail", "hyperloop",
+      "high-speed rail", "high speed rail", "mrt", "subway",
+      "light rail", "lrt", "monorail",
       // Transit
-      "mass transit", "public transit", "urban transit", "rapid transit",
-      "transit project", "transit system", "transit infrastructure",
-      "commuter rail", "passenger rail", "rail investment", "rail corridor",
-      // Infrastructure finance
-      "transport infrastructure", "urban transport", "urban mobility",
-      "rail corridor", "transport project", "infrastructure financing",
+      "passenger rail", "rail investment", "rail corridor",
       // Other
-      "rolling stock", "viaduct", "bullet train",
-      "transit-oriented development", "transportation infrastructure",
+      "rolling stock", "bullet train",
+      "transit-oriented development",
     ];
 
     // -------------------------------------------------------------------------
