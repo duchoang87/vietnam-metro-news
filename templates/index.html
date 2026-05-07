@@ -371,7 +371,7 @@
       `<div class="spinner"></div>` +
       `<p>${msg || "Fetching latest news…"}</p>` +
       `<p style="font-size:0.78rem;color:#a0aec0;margin-top:6px">` +
-      `First load after server idle can take ~20–40s while sources are fetched.</p>`;
+      `First load after server idle can take ~20–30s while sources are fetched.</p>`;
     status.style.display = "block";
     document.getElementById("app").style.display = "none";
   }
@@ -412,7 +412,7 @@
     btn.disabled = true;
     showLoading("Fetching latest news…");
 
-    const MAX_ATTEMPTS = 40;     // ~40 * 3s = 120s max wait (sequential fetch ~14s + cold start ~30s)
+    const MAX_ATTEMPTS = 30;     // ~30 * 3s = 90s max wait (parallel fetch ~10s + cold start ~30s)
     const POLL_INTERVAL = 3000;
     let attempt = 0;
 
