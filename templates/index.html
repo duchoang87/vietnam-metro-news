@@ -412,7 +412,7 @@
     btn.disabled = true;
     showLoading("Fetching latest news…");
 
-    const MAX_ATTEMPTS = 25;     // ~25 * 3s = 75s max wait
+    const MAX_ATTEMPTS = 40;     // ~40 * 3s = 120s max wait (sequential fetch ~14s + cold start ~30s)
     const POLL_INTERVAL = 3000;
     let attempt = 0;
 

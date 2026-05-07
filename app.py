@@ -23,7 +23,7 @@ import urllib.request
 import uuid
 import xml.etree.ElementTree as ET
 from collections import OrderedDict
-from concurrent.futures import ThreadPoolExecutor, as_completed
+
 from datetime import datetime, timezone, timedelta
 from email.utils import parsedate_to_datetime
 
@@ -244,32 +244,44 @@ def _sort_key(a):
 
 
 # ---------------------------------------------------------------------------
-# Parallel fetch + cache refresh
+# Sequential fetch + cache refresh
+# (Sequential is intentional — parallel requests from the same server IP
+#  trigger Google News rate limiting, causing all feeds to return HTML
+#  instead of XML and yielding 0 articles.)
 # ---------------------------------------------------------------------------
 
-def _fetch_all() -> list:
-    """Fetch every (query, lang) pair in parallel and return a deduped, sorted list."""
-    pairs = [(q, "vi") for q in VI_QUERIES] + [(q, "en") for q in EN_QUERIES]
-    results: dict[int, list] = {}
+# Store last fetch diagnostics for /api/debug
+_last_fetch_stats: list = []   # [{query, lang, count, ok}]
 
-    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
-        future_to_idx = {
-            executor.submit(fetch_rss, q, lang): i
-            for i, (q, lang) in enumerate(pairs)
-        }
-        for fut in as_completed(future_to_idx):
-            idx = future_to_idx[fut]
-            try:
-                results[idx] = fut.result()
-            except Exception as e:
-                print(f"[fetch] index {idx} error: {e}")
-                results[idx] = []
+FETCH_DELAY = 1.5   # seconds between sequential RSS requests
+
+
+def _fetch_all() -> list:
+    """Fetch every (query, lang) pair sequentially and return a deduped, sorted list."""
+    global _last_fetch_stats
+    pairs = [(q, "vi") for q in VI_QUERIES] + [(q, "en") for q in EN_QUERIES]
+    results: list[list] = []
+    stats: list[dict] = []
+
+    for i, (q, lang) in enumerate(pairs):
+        if i > 0:
+            time.sleep(FETCH_DELAY)
+        try:
+            items = fetch_rss(q, lang)
+        except Exception as e:
+            print(f"[fetch] '{q}' ({lang}) error: {e}")
+            items = []
+        results.append(items)
+        stats.append({"query": q, "lang": lang, "count": len(items), "ok": len(items) > 0})
+        print(f"[fetch] '{q}' ({lang}) -> {len(items)} items")
+
+    _last_fetch_stats = stats
 
     cutoff = datetime.now(timezone.utc) - timedelta(days=MAX_AGE_DAYS)
     seen: set = set()
     flat: list = []
-    for i in range(len(pairs)):
-        for a in results.get(i, []):
+    for items in results:
+        for a in items:
             key = re.sub(r"\s+", " ", a["title"].lower()[:60])
             if key in seen:
                 continue
@@ -367,6 +379,23 @@ def health():
             "fetched_at": _cache["fetched_at"],
             "last_error": _cache["last_error"],
         }
+
+
+@app.route("/api/debug")
+def debug():
+    """Show per-query fetch results from the last refresh cycle."""
+    with _cache_lock:
+        cache_status = _cache["status"]
+        count        = len(_cache["news"])
+        last_error   = _cache["last_error"]
+        fetched_at   = _cache["fetched_at"]
+    return {
+        "cache_status": cache_status,
+        "article_count": count,
+        "fetched_at":   fetched_at,
+        "last_error":   last_error,
+        "query_stats":  _last_fetch_stats,
+    }
 
 
 @app.route("/api/news")
