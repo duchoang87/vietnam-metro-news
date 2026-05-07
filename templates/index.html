@@ -503,6 +503,10 @@
       "TOD", "depot", "khu depot", "đầu máy toa xe", "cầu cạn",
       "vận tải công cộng", "giao thông đô thị", "vận hành thương mại",
       "BRT", "xe buýt nhanh", "tuyến số",
+      // Đường sắt tốc độ cao Bắc-Nam (chủ đề lớn 2024-2025)
+      "Bắc - Nam", "đường sắt Bắc Nam", "đường sắt 350", "MAUR",
+      "Ban Quản lý đường sắt", "ga đường sắt", "đường sắt liên vận",
+      "đường sắt 1.435", "đường sắt khổ tiêu chuẩn",
     ];
     const EN_KW = [
       // Metro & rail
@@ -526,8 +530,12 @@
     // Helpers
     // -------------------------------------------------------------------------
 
-    function isRelevant(title, lang) {
+    function isRelevant(title, lang, feedSrc) {
       const t = title.toLowerCase();
+      // Các tổ chức phát triển quốc tế: cũng chấp nhận nếu đề cập Việt Nam
+      if (feedSrc === "AIIB" || feedSrc === "ADB" || feedSrc === "ASEAN") {
+        return t.includes("viet") || EN_KW.some(kw => t.includes(kw));
+      }
       return (lang === "vi" ? VI_KW : EN_KW).some(kw => t.includes(kw));
     }
 
@@ -593,7 +601,7 @@
           const linkEl = item.querySelector("link");
           if (linkEl) link = linkEl.textContent?.trim() || linkEl.getAttribute("href") || "";
           return { title, link, pubDate, source: feed.src, lang: feed.lang };
-        }).filter(a => a.title && isRelevant(a.title, feed.lang));
+        }).filter(a => a.title && isRelevant(a.title, feed.lang, feed.src));
       } catch (_) {
         return [];
       }
@@ -692,8 +700,12 @@
           return true;
         });
 
-        // Enrich with computed fields
-        const enriched = deduped.map(a => ({
+        // Merge raw articles với localStorage cache trước khi enrich
+        // (cache lưu raw để tránh stale age/date khi đọc lại)
+        const merged = mergeWithCache(deduped);
+
+        // Enrich toàn bộ merged pool
+        const enriched = merged.map(a => ({
           ...a,
           date: formatDate(a.pubDate),
           age: ageAgo(a.pubDate),
@@ -704,10 +716,8 @@
         // Sort newest-first
         enriched.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
 
-        // Merge với localStorage cache để tích lũy bài qua nhiều lần truy cập
-        const merged = mergeWithCache(enriched);
-        const vi = merged.filter(a => a.lang === "vi").slice(0, MAX_VI);
-        const en = merged.filter(a => a.lang === "en").slice(0, MAX_EN);
+        const vi = enriched.filter(a => a.lang === "vi").slice(0, MAX_VI);
+        const en = enriched.filter(a => a.lang === "en").slice(0, MAX_EN);
         allNews = [...vi, ...en];
 
         if (!allNews.length) throw new Error("No relevant articles found. Try again later.");
