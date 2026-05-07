@@ -78,9 +78,7 @@
     }
     .modal h2 { font-size: 1.1rem; font-weight: 700; margin-bottom: 6px; }
     .modal p  { font-size: 0.85rem; color: #718096; margin-bottom: 16px; }
-    .url-row {
-      display: flex; gap: 8px; align-items: center;
-    }
+    .url-row { display: flex; gap: 8px; align-items: center; }
     .url-box {
       flex: 1;
       padding: 9px 12px;
@@ -152,16 +150,12 @@
       color: #4a5568;
     }
     .pill.active, .pill:hover { color: white; border-color: transparent; }
-    .pill[data-cat="All"].active    { background: #2d3748; }
-    .pill[data-cat="Metro"].active  { background: #2563eb; }
-    .pill[data-cat="Railway"].active{ background: #059669; }
+    .pill[data-cat="All"].active     { background: #2d3748; }
+    .pill[data-cat="Metro"].active   { background: #2563eb; }
+    .pill[data-cat="Railway"].active { background: #059669; }
 
     /* Status */
-    #status {
-      text-align: center;
-      padding: 48px 20px;
-      color: #718096;
-    }
+    #status { text-align: center; padding: 48px 20px; color: #718096; }
     .spinner {
       width: 40px; height: 40px;
       border: 4px solid #e2e8f0;
@@ -178,7 +172,6 @@
       grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
       gap: 18px;
     }
-
     .card {
       background: white;
       border-radius: 10px;
@@ -188,10 +181,7 @@
       flex-direction: column;
       transition: transform 0.15s, box-shadow 0.15s;
     }
-    .card:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 6px 18px rgba(0,0,0,0.12);
-    }
+    .card:hover { transform: translateY(-3px); box-shadow: 0 6px 18px rgba(0,0,0,0.12); }
     .card.hidden { display: none; }
 
     .card-tag {
@@ -213,23 +203,13 @@
       padding: 1px 6px;
       letter-spacing: 0;
     }
-    .tag-Metro  { background: #2563eb; }
-    .tag-Railway{ background: #059669; }
+    .tag-Metro   { background: #2563eb; }
+    .tag-Railway { background: #059669; }
 
     .card-body { padding: 15px; flex: 1; display: flex; flex-direction: column; gap: 8px; }
-
-    .card-title {
-      font-size: 0.95rem;
-      font-weight: 700;
-      line-height: 1.4;
-      color: #1a202c;
-    }
-    .card-title a {
-      color: inherit;
-      text-decoration: none;
-    }
+    .card-title { font-size: 0.95rem; font-weight: 700; line-height: 1.4; color: #1a202c; }
+    .card-title a { color: inherit; text-decoration: none; }
     .card-title a:hover { text-decoration: underline; color: #d62828; }
-
     .card-meta {
       display: flex;
       justify-content: space-between;
@@ -249,13 +229,7 @@
       border-radius: 8px;
       color: #c53030;
     }
-
-    .no-results {
-      text-align: center;
-      padding: 40px;
-      color: #718096;
-      grid-column: 1/-1;
-    }
+    .no-results { text-align: center; padding: 40px; color: #718096; grid-column: 1/-1; }
   </style>
 </head>
 <body>
@@ -289,10 +263,10 @@
   <div class="modal">
     <button class="close-btn" onclick="closeExport()">×</button>
     <h2>🔗 Content Snapshot Link</h2>
-    <p id="modal-desc">Generates a unique URL containing all 30 articles as they are right now — frozen in time. Import into Make, Zapier, n8n, or any HTTP client.</p>
+    <p>Generates a unique URL containing the current articles — frozen in time. Import into Make, Zapier, n8n, or any HTTP client.</p>
     <div id="modal-generating" style="display:none;text-align:center;padding:16px 0;color:#718096;font-size:0.88rem">
       <div class="spinner" style="width:28px;height:28px;border-width:3px;margin-bottom:8px"></div>
-      Fetching articles &amp; creating snapshot…
+      Creating snapshot…
     </div>
     <div id="modal-result" style="display:none">
       <div class="url-row">
@@ -309,139 +283,224 @@
 </div>
 
 <script>
-  const CATS = ["All", "Metro", "Railway"];
-  let activeCat = "All";
-  let allNews = [];
+  // -------------------------------------------------------------------------
+  // Config
+  // -------------------------------------------------------------------------
 
-  function tagClass(cat) {
-    return "tag-" + cat.replace(/\s+/g, "-");
+  const CORS_PROXY    = "https://api.allorigins.win/get?url=";
+  const CORS_FALLBACK = "https://corsproxy.io/?";   // used if primary proxy fails
+
+  const FEEDS = [
+    { url: "https://vnexpress.net/rss/thoi-su.rss",    lang: "vi", src: "VnExpress"   },
+    { url: "https://vnexpress.net/rss/kinh-te.rss",    lang: "vi", src: "VnExpress"   },
+    { url: "https://vnexpress.net/rss/giao-thong.rss", lang: "vi", src: "VnExpress"   },
+    { url: "https://tuoitre.vn/rss/thoi-su.rss",       lang: "vi", src: "Tuổi Trẻ"   },
+    { url: "https://tuoitre.vn/rss/kinh-te.rss",       lang: "vi", src: "Tuổi Trẻ"   },
+    { url: "https://thanhnien.vn/rss/home.rss",        lang: "vi", src: "Thanh Niên"  },
+    { url: "https://vtv.vn/trong-nuoc.rss",            lang: "vi", src: "VTV"         },
+    { url: "https://dantri.com.vn/xa-hoi.rss",         lang: "vi", src: "Dân Trí"    },
+    { url: "https://e.vnexpress.net/rss/news.rss",     lang: "en", src: "VnExpress EN"},
+    { url: "https://e.vnexpress.net/rss/business.rss", lang: "en", src: "VnExpress EN"},
+  ];
+
+  const MAX_VI = 20;
+  const MAX_EN = 10;
+
+  const VI_KW = [
+    "metro", "mrt", "tàu điện", "bến thành", "suối tiến", "nhổn", "cát linh",
+    "đường sắt", "tốc độ cao", "đường ray", "đường sắt cao tốc", "đường sắt đô thị",
+  ];
+  const EN_KW = [
+    "metro", "railway", "rail line", "rail project", "rail network",
+    "high-speed rail", "high speed rail", "mrt", "metro line", "metro station",
+  ];
+
+  // -------------------------------------------------------------------------
+  // Helpers
+  // -------------------------------------------------------------------------
+
+  function isRelevant(title, lang) {
+    const t = title.toLowerCase();
+    return (lang === "vi" ? VI_KW : EN_KW).some(kw => t.includes(kw));
   }
 
+  function categorize(title) {
+    const t = title.toLowerCase();
+    return ["metro","mrt","bến thành","suối tiến","nhổn","cát linh",
+            "tàu điện","đường sắt đô thị"].some(k => t.includes(k))
+      ? "Metro" : "Railway";
+  }
+
+  function locate(title) {
+    const t = title.toLowerCase();
+    if (["ho chi minh","hcmc","saigon","sài gòn","tphcm","tp.hcm","bến thành","suối tiến"]
+        .some(k => t.includes(k))) return "Ho Chi Minh City";
+    if (["hanoi","hà nội","cát linh","nhổn"].some(k => t.includes(k))) return "Hanoi";
+    if (["đà nẵng","da nang"].some(k => t.includes(k))) return "Da Nang";
+    return "Vietnam";
+  }
+
+  function ageAgo(dateStr) {
+    if (!dateStr) return "";
+    const d = new Date(dateStr);
+    if (isNaN(d)) return "";
+    const s = Math.floor((Date.now() - d) / 1000);
+    if (s < 3600)  { const m = Math.max(1, Math.floor(s/60));  return `${m} minute${m!==1?"s":""} ago`; }
+    if (s < 86400) { const h = Math.floor(s/3600);             return `${h} hour${h!==1?"s":""} ago`; }
+    const day = Math.floor(s/86400);                           return `${day} day${day!==1?"s":""} ago`;
+  }
+
+  function formatDate(dateStr) {
+    if (!dateStr) return "";
+    const d = new Date(dateStr);
+    if (isNaN(d)) return dateStr.slice(0, 16);
+    return d.toLocaleDateString("en-GB", { day:"2-digit", month:"short", year:"numeric" });
+  }
+
+  // -------------------------------------------------------------------------
+  // RSS fetch via CORS proxy
+  // -------------------------------------------------------------------------
+
+  async function fetchXml(url) {
+    // Try primary proxy (allorigins.win returns {contents: "<xml>..."})
+    try {
+      const res = await fetch(CORS_PROXY + encodeURIComponent(url), { signal: AbortSignal.timeout(12000) });
+      const json = await res.json();
+      if (json && json.contents) return json.contents;
+    } catch (_) {}
+
+    // Fallback: corsproxy.io passes the response through directly
+    try {
+      const res = await fetch(CORS_FALLBACK + encodeURIComponent(url), { signal: AbortSignal.timeout(12000) });
+      if (res.ok) return await res.text();
+    } catch (_) {}
+
+    return null;
+  }
+
+  function parseItems(xmlText, feed) {
+    try {
+      const doc = new DOMParser().parseFromString(xmlText, "text/xml");
+      if (doc.querySelector("parsererror")) return [];
+
+      return [...doc.querySelectorAll("item")].map(item => {
+        const title   = item.querySelector("title")?.textContent?.trim() || "";
+        const pubDate = item.querySelector("pubDate")?.textContent?.trim() || "";
+        // <link> in RSS is a text node sibling, not an element attribute
+        let link = "";
+        const linkEl = item.querySelector("link");
+        if (linkEl) link = linkEl.textContent?.trim() || linkEl.getAttribute("href") || "";
+
+        return { title, link, pubDate, source: feed.src, lang: feed.lang };
+      }).filter(a => a.title && isRelevant(a.title, feed.lang));
+    } catch (_) {
+      return [];
+    }
+  }
+
+  async function fetchFeed(feed) {
+    const xml = await fetchXml(feed.url);
+    if (!xml) return [];
+    return parseItems(xml, feed);
+  }
+
+  // -------------------------------------------------------------------------
+  // Main load
+  // -------------------------------------------------------------------------
+
+  const CATS = ["All", "Metro", "Railway"];
+  let activeCat = "All";
+  let allNews   = [];
+
+  function tagClass(cat) { return "tag-" + cat; }
+
   function renderFilters() {
-    const el = document.getElementById("filters");
-    el.innerHTML = CATS.map(c =>
-      `<span class="pill${c === activeCat ? " active" : ""}" data-cat="${c}" onclick="setFilter('${c}')">${c}</span>`
+    document.getElementById("filters").innerHTML = CATS.map(c =>
+      `<span class="pill${c===activeCat?" active":""}" data-cat="${c}" onclick="setFilter('${c}')">${c}</span>`
     ).join("");
   }
 
-  function setFilter(cat) {
-    activeCat = cat;
-    renderFilters();
-    applyFilter();
-  }
+  function setFilter(cat) { activeCat = cat; renderFilters(); applyFilter(); }
 
   function applyFilter() {
     document.querySelectorAll(".card").forEach(card => {
-      const match = activeCat === "All" || card.dataset.cat === activeCat;
-      card.classList.toggle("hidden", !match);
+      card.classList.toggle("hidden", activeCat !== "All" && card.dataset.cat !== activeCat);
     });
-    const visible = document.querySelectorAll(".card:not(.hidden)").length;
-    if (visible === 0) {
+    if (!document.querySelector(".card:not(.hidden)")) {
       document.getElementById("grid").insertAdjacentHTML(
         "beforeend", `<p class="no-results">No articles in this category.</p>`);
     }
   }
 
   function renderCard(item) {
-    const cls = tagClass(item.category);
     const titleHtml = item.link
       ? `<a href="${item.link}" target="_blank" rel="noopener">${item.title}</a>`
       : item.title;
-    const langBadge = item.lang === "vi" ? "🇻🇳 VI" : "🇬🇧 EN";
     return `
       <div class="card" data-cat="${item.category}">
-        <div class="card-tag ${cls}">
+        <div class="card-tag ${tagClass(item.category)}">
           <span>${item.category}</span>
-          <span class="lang-badge">${langBadge}</span>
+          <span class="lang-badge">${item.lang==="vi"?"🇻🇳 VI":"🇬🇧 EN"}</span>
         </div>
         <div class="card-body">
           <div class="card-title">${titleHtml}</div>
           <div class="card-meta">
             <span class="loc">📍 ${item.location}</span>
-            <span>${item.source ? item.source + " · " : ""}${item.age || item.date}</span>
+            <span>${item.source ? item.source+" · " : ""}${item.age||item.date}</span>
           </div>
         </div>
       </div>`;
   }
 
-  // Show the warming/loading screen with optional sub-message
-  function showLoading(msg) {
-    const status = document.getElementById("status");
-    status.innerHTML =
-      `<div class="spinner"></div>` +
-      `<p>${msg || "Fetching latest news…"}</p>` +
-      `<p style="font-size:0.78rem;color:#a0aec0;margin-top:6px">` +
-      `First load after server idle can take ~20–30s while sources are fetched.</p>`;
-    status.style.display = "block";
-    document.getElementById("app").style.display = "none";
-  }
-
-  function renderArticles(data) {
-    allNews = data.news;
-    const grid = document.getElementById("grid");
-    grid.innerHTML = allNews.map(renderCard).join("");
-
-    const now = new Date().toLocaleTimeString();
-    const vi = allNews.filter(a => a.lang === "vi").length;
-    const en = allNews.filter(a => a.lang === "en").length;
-    const tag = data.cache === "stale" ? " · ⚠ stale" : "";
-    document.getElementById("meta").textContent =
-      `${allNews.length} articles (🇻🇳 ${vi} · 🇬🇧 ${en}) · updated ${now}${tag}`;
-
-    renderFilters();
-    applyFilter();
-
-    document.getElementById("status").style.display = "none";
-    document.getElementById("app").style.display = "block";
-  }
-
-  // Fetch /api/news with retry/backoff; the API is non-blocking now,
-  // so a "warming" response just means we should poll again soon.
-  async function fetchNewsOnce() {
-    const res = await fetch("/api/news", { cache: "no-store" });
-    const text = await res.text();
-    try {
-      return JSON.parse(text);
-    } catch (e) {
-      throw new Error(`Server returned invalid response (HTTP ${res.status}).`);
-    }
-  }
-
   async function loadNews() {
     const btn = document.getElementById("refresh-btn");
     btn.disabled = true;
-    showLoading("Fetching latest news…");
-
-    const MAX_ATTEMPTS = 30;     // ~30 * 3s = 90s max wait (parallel fetch ~10s + cold start ~30s)
-    const POLL_INTERVAL = 3000;
-    let attempt = 0;
+    document.getElementById("status").innerHTML =
+      `<div class="spinner"></div><p>Fetching news from ${FEEDS.length} sources…</p>`;
+    document.getElementById("status").style.display = "block";
+    document.getElementById("app").style.display = "none";
 
     try {
-      while (attempt < MAX_ATTEMPTS) {
-        attempt++;
-        let data;
-        try {
-          data = await fetchNewsOnce();
-        } catch (e) {
-          // Network or 502: server might still be cold-starting on Render.
-          showLoading(`Waking up server… (attempt ${attempt})`);
-          await new Promise(r => setTimeout(r, POLL_INTERVAL));
-          continue;
-        }
+      // Parallel fetch across all feeds (different servers — no rate-limit risk)
+      const results = await Promise.allSettled(FEEDS.map(fetchFeed));
+      const flat = results.flatMap(r => r.status === "fulfilled" ? r.value : []);
 
-        if (data.news && data.news.length > 0) {
-          renderArticles(data);
-          return;
-        }
+      // Deduplicate by title prefix
+      const seen = new Set();
+      const deduped = flat.filter(a => {
+        const key = a.title.toLowerCase().slice(0, 60).replace(/\s+/g, " ");
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
 
-        if (data.cache === "warming") {
-          showLoading(`Sources are being fetched… (${attempt}/${MAX_ATTEMPTS})`);
-        } else {
-          showLoading(`No articles yet. Retrying… (${attempt}/${MAX_ATTEMPTS})`);
-        }
-        await new Promise(r => setTimeout(r, POLL_INTERVAL));
-      }
-      throw new Error("Timed out waiting for news. Try again in a moment.");
+      // Enrich with computed fields
+      const enriched = deduped.map(a => ({
+        ...a,
+        date:     formatDate(a.pubDate),
+        age:      ageAgo(a.pubDate),
+        category: categorize(a.title),
+        location: locate(a.title),
+      }));
+
+      // Sort newest-first
+      enriched.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
+
+      // Cap VI + EN separately
+      const vi = enriched.filter(a => a.lang === "vi").slice(0, MAX_VI);
+      const en = enriched.filter(a => a.lang === "en").slice(0, MAX_EN);
+      allNews = [...vi, ...en];
+
+      if (!allNews.length) throw new Error("No relevant articles found. Try again later.");
+
+      document.getElementById("grid").innerHTML = allNews.map(renderCard).join("");
+      document.getElementById("meta").textContent =
+        `${allNews.length} articles (🇻🇳 ${vi.length} · 🇬🇧 ${en.length}) · updated ${new Date().toLocaleTimeString()}`;
+
+      renderFilters();
+      applyFilter();
+      document.getElementById("status").style.display = "none";
+      document.getElementById("app").style.display = "block";
     } catch (err) {
       document.getElementById("status").innerHTML =
         `<div class="error-box"><strong>Error:</strong> ${err.message}</div>`;
@@ -450,40 +509,42 @@
     }
   }
 
+  // -------------------------------------------------------------------------
+  // Snapshot export (sends current articles to server for a shareable URL)
+  // -------------------------------------------------------------------------
+
   async function openExport() {
-    // Reset modal state
-    document.getElementById("modal-result").style.display = "none";
+    document.getElementById("modal-result").style.display    = "none";
     document.getElementById("modal-generating").style.display = "block";
     document.getElementById("copy-btn").textContent = "Copy";
     document.getElementById("copy-btn").classList.remove("copied");
     document.getElementById("modal-overlay").classList.add("open");
 
     try {
-      const res  = await fetch("/api/snapshot", { method: "POST" });
+      if (!allNews.length) throw new Error("No articles loaded yet.");
+      const res  = await fetch("/api/snapshot", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify(allNews),
+      });
       const data = await res.json();
       if (data.status !== "success") throw new Error(data.message);
 
-      document.getElementById("export-url").textContent = data.url;
-      document.getElementById("open-link").href = data.url;
+      document.getElementById("export-url").textContent     = data.url;
+      document.getElementById("open-link").href             = data.url;
       document.getElementById("modal-generating").style.display = "none";
-      document.getElementById("modal-result").style.display = "block";
+      document.getElementById("modal-result").style.display    = "block";
     } catch (err) {
       document.getElementById("modal-generating").innerHTML =
         `<span style="color:#c53030">Error: ${err.message}</span>`;
     }
   }
 
-  function closeExport() {
-    document.getElementById("modal-overlay").classList.remove("open");
-  }
-
-  function closeExportOnBg(e) {
-    if (e.target === document.getElementById("modal-overlay")) closeExport();
-  }
+  function closeExport() { document.getElementById("modal-overlay").classList.remove("open"); }
+  function closeExportOnBg(e) { if (e.target === document.getElementById("modal-overlay")) closeExport(); }
 
   function copyUrl() {
-    const url = document.getElementById("export-url").textContent;
-    navigator.clipboard.writeText(url).then(() => {
+    navigator.clipboard.writeText(document.getElementById("export-url").textContent).then(() => {
       const btn = document.getElementById("copy-btn");
       btn.textContent = "Copied!";
       btn.classList.add("copied");
