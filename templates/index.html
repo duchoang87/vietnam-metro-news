@@ -364,45 +364,87 @@
       </div>`;
   }
 
-  async function loadNews() {
-    const status  = document.getElementById("status");
-    const appDiv  = document.getElementById("app");
-    const grid    = document.getElementById("grid");
-    const btn     = document.getElementById("refresh-btn");
-
+  // Show the warming/loading screen with optional sub-message
+  function showLoading(msg) {
+    const status = document.getElementById("status");
+    status.innerHTML =
+      `<div class="spinner"></div>` +
+      `<p>${msg || "Fetching latest news…"}</p>` +
+      `<p style="font-size:0.78rem;color:#a0aec0;margin-top:6px">` +
+      `First load after server idle can take ~20–40s while sources are fetched.</p>`;
     status.style.display = "block";
-    appDiv.style.display = "none";
-    grid.innerHTML = "";
+    document.getElementById("app").style.display = "none";
+  }
+
+  function renderArticles(data) {
+    allNews = data.news;
+    const grid = document.getElementById("grid");
+    grid.innerHTML = allNews.map(renderCard).join("");
+
+    const now = new Date().toLocaleTimeString();
+    const vi = allNews.filter(a => a.lang === "vi").length;
+    const en = allNews.filter(a => a.lang === "en").length;
+    const tag = data.cache === "stale" ? " · ⚠ stale" : "";
+    document.getElementById("meta").textContent =
+      `${allNews.length} articles (🇻🇳 ${vi} · 🇬🇧 ${en}) · updated ${now}${tag}`;
+
+    renderFilters();
+    applyFilter();
+
+    document.getElementById("status").style.display = "none";
+    document.getElementById("app").style.display = "block";
+  }
+
+  // Fetch /api/news with retry/backoff; the API is non-blocking now,
+  // so a "warming" response just means we should poll again soon.
+  async function fetchNewsOnce() {
+    const res = await fetch("/api/news", { cache: "no-store" });
+    const text = await res.text();
+    try {
+      return JSON.parse(text);
+    } catch (e) {
+      throw new Error(`Server returned invalid response (HTTP ${res.status}).`);
+    }
+  }
+
+  async function loadNews() {
+    const btn = document.getElementById("refresh-btn");
     btn.disabled = true;
+    showLoading("Fetching latest news…");
+
+    const MAX_ATTEMPTS = 25;     // ~25 * 3s = 75s max wait
+    const POLL_INTERVAL = 3000;
+    let attempt = 0;
 
     try {
-      const res  = await fetch("/api/news");
-      const text = await res.text();
-      let data;
-      try {
-        data = JSON.parse(text);
-      } catch (e) {
-        throw new Error(`Server returned invalid JSON. Status: ${res.status}. This might be a timeout.`);
+      while (attempt < MAX_ATTEMPTS) {
+        attempt++;
+        let data;
+        try {
+          data = await fetchNewsOnce();
+        } catch (e) {
+          // Network or 502: server might still be cold-starting on Render.
+          showLoading(`Waking up server… (attempt ${attempt})`);
+          await new Promise(r => setTimeout(r, POLL_INTERVAL));
+          continue;
+        }
+
+        if (data.news && data.news.length > 0) {
+          renderArticles(data);
+          return;
+        }
+
+        if (data.cache === "warming") {
+          showLoading(`Sources are being fetched… (${attempt}/${MAX_ATTEMPTS})`);
+        } else {
+          showLoading(`No articles yet. Retrying… (${attempt}/${MAX_ATTEMPTS})`);
+        }
+        await new Promise(r => setTimeout(r, POLL_INTERVAL));
       }
-
-      if (data.status !== "success") throw new Error(data.message);
-
-      allNews = data.news;
-      grid.innerHTML = allNews.map(renderCard).join("");
-
-      const now = new Date().toLocaleTimeString();
-      const vi = allNews.filter(a => a.lang === "vi").length;
-      const en = allNews.filter(a => a.lang === "en").length;
-      document.getElementById("meta").textContent =
-        `${allNews.length} articles (🇻🇳 ${vi} · 🇬🇧 ${en}) · updated ${now}`;
-
-      renderFilters();
-      applyFilter();
-
-      status.style.display = "none";
-      appDiv.style.display = "block";
+      throw new Error("Timed out waiting for news. Try again in a moment.");
     } catch (err) {
-      status.innerHTML = `<div class="error-box"><strong>Error:</strong> ${err.message}</div>`;
+      document.getElementById("status").innerHTML =
+        `<div class="error-box"><strong>Error:</strong> ${err.message}</div>`;
     } finally {
       btn.disabled = false;
     }

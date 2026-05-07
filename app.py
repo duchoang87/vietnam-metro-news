@@ -1,59 +1,119 @@
+"""
+Vietnam Metro & Railway News
+============================
+Flask app aggregating Google News RSS feeds.
+
+Architecture (the important part):
+  - A background thread continuously refreshes the cache every CACHE_TTL.
+  - /api/news ALWAYS returns the current cache instantly (never blocks on fetch).
+  - When the cache is cold (warming up), the API reports status="warming" and
+    the frontend polls until it goes "ready". This is what avoids Render's
+    30s response timeout that produced the recurring 502 errors.
+  - Cache also persists to /tmp so warm restarts don't start from zero.
+"""
+
 import json as _json
 import os
 import re
 import subprocess
 import threading
+import time
 import urllib.parse
 import urllib.request
 import uuid
 import xml.etree.ElementTree as ET
-import time
 from collections import OrderedDict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone, timedelta
 from email.utils import parsedate_to_datetime
+
 from flask import Flask, Response, render_template, request
 
 app = Flask(__name__)
 
+
+# ---------------------------------------------------------------------------
+# Configuration
+# ---------------------------------------------------------------------------
+
 VI_QUERIES = [
     "metro Ho Chi Minh",
     "metro Ha Noi",
-    "tuyen metro thanh pho ho chi minh",
-    "du an Metro",
-    "metro ben thanh",
-    "duong sat toc do cao",
-    "duong sat Bac Nam",
-    "duong sat Lien vung",
-    "duong sat Thong Nhat",
-    "duong sat Ha Noi Lao Cai Hai Phong",
+    "du an metro Viet Nam",
+    "duong sat toc do cao Bac Nam",
+    "duong sat Viet Nam",
+    "tuyen metro Ben Thanh Suoi Tien",
 ]
 
 EN_QUERIES = [
-    "Ho Chi Minh City metro",
-    "Hanoi metro line",
-    "vietnam high speed rail",
-    "vietnam railway infrastructure",
+    "Vietnam metro line",
+    "Vietnam high speed rail",
+    "Hanoi Ho Chi Minh railway",
 ]
 
-MAX_VI       = 20
-MAX_EN       = 10
-MAX_AGE_DAYS = 30
-FETCH_TIMEOUT = 8   # seconds per RSS request
-MAX_WORKERS   = 8   # parallel threads
+MAX_VI        = 20
+MAX_EN        = 10
+MAX_AGE_DAYS  = 30
+FETCH_TIMEOUT = 8     # per-RSS HTTP timeout (seconds)
+MAX_WORKERS   = 6     # parallel RSS fetches
+CACHE_TTL     = 300   # 5 minutes — refresh interval for the background warmer
+CACHE_FILE    = os.environ.get("CACHE_FILE", "/tmp/vn_metro_news_cache.json")
 
-_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
+_UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+       "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36")
 
-# In-memory snapshot store: uuid -> payload (capped at 20 entries)
-_snapshots = OrderedDict()
+# Snapshot store for /api/snapshot (capped LRU)
+_snapshots: "OrderedDict[str, dict]" = OrderedDict()
+_SNAPSHOT_CAP = 20
 
 
 # ---------------------------------------------------------------------------
-# HTTP fetch — urllib with curl fallback
+# Cache state — accessed by background thread + request handlers
+# ---------------------------------------------------------------------------
+
+_cache_lock = threading.Lock()
+_cache: dict = {
+    "news": [],
+    "fetched_at": None,    # ISO string
+    "status": "warming",   # "warming" | "ready" | "stale"
+    "last_error": None,
+}
+
+
+def _load_cache_from_disk() -> None:
+    """Best-effort: restore cache after a warm restart."""
+    try:
+        if not os.path.exists(CACHE_FILE):
+            return
+        with open(CACHE_FILE, "r", encoding="utf-8") as f:
+            data = _json.load(f)
+        if isinstance(data, dict) and isinstance(data.get("news"), list) and data["news"]:
+            with _cache_lock:
+                _cache["news"]       = data["news"]
+                _cache["fetched_at"] = data.get("fetched_at")
+                _cache["status"]     = "ready"
+            print(f"[cache] Restored {len(data['news'])} articles from {CACHE_FILE}")
+    except Exception as e:
+        print(f"[cache] load failed: {e}")
+
+
+def _save_cache_to_disk() -> None:
+    try:
+        with _cache_lock:
+            payload = {"news": _cache["news"], "fetched_at": _cache["fetched_at"]}
+        tmp = CACHE_FILE + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            _json.dump(payload, f, ensure_ascii=False)
+        os.replace(tmp, CACHE_FILE)
+    except Exception as e:
+        print(f"[cache] save failed: {e}")
+
+
+# ---------------------------------------------------------------------------
+# HTTP fetch with curl fallback
 # ---------------------------------------------------------------------------
 
 def _get_url(url: str) -> str:
-    """Return the raw text of a URL. Tries urllib first, then curl."""
     try:
         req = urllib.request.Request(url, headers={"User-Agent": _UA})
         with urllib.request.urlopen(req, timeout=FETCH_TIMEOUT) as r:
@@ -90,14 +150,12 @@ def fetch_rss(query: str, lang: str = "en") -> list:
 # ---------------------------------------------------------------------------
 
 def _strip_namespaces(xml_text: str) -> str:
-    """Remove XML namespace declarations so ET can parse without ns prefixes."""
     xml_text = re.sub(r'\s+xmlns(?::\w+)?\s*=\s*"[^"]*"', "", xml_text)
     xml_text = re.sub(r"<(/?)[a-zA-Z][a-zA-Z0-9_]*:", r"<\1", xml_text)
     return xml_text
 
 
 def parse_rss(xml_text: str, lang: str = "en") -> list:
-    root = None
     try:
         root = ET.fromstring(xml_text)
     except ET.ParseError:
@@ -108,13 +166,11 @@ def parse_rss(xml_text: str, lang: str = "en") -> list:
             return []
 
     items = []
-    entries = root.findall(".//item") or root.findall(".//entry")
-    for item in entries:
-        title  = (item.findtext("title")   or "").strip()
-        link   = (item.findtext("link")    or "").strip()
-        pub    = (item.findtext("pubDate") or "").strip()
+    for item in (root.findall(".//item") or root.findall(".//entry")):
+        title = (item.findtext("title") or "").strip()
+        link  = (item.findtext("link")  or "").strip()
+        pub   = (item.findtext("pubDate") or "").strip()
 
-        # <source> element
         source = ""
         src_el = item.find("source")
         if src_el is not None:
@@ -173,7 +229,7 @@ def categorize(title: str) -> str:
 
 def locate(title: str) -> str:
     t = title.lower()
-    if any(k in t for k in ["ho chi minh", "hcmc", "saigon", "sai gon"]):
+    if any(k in t for k in ["ho chi minh", "hcmc", "saigon", "sai gon", "tphcm", "tp.hcm"]):
         return "Ho Chi Minh City"
     if any(k in t for k in ["hanoi", "ha noi", "cat linh", "nhon"]):
         return "Hanoi"
@@ -182,106 +238,114 @@ def locate(title: str) -> str:
     return "Vietnam"
 
 
-def sort_key(a):
+def _sort_key(a):
     dt = a.get("dt")
     return dt.astimezone(timezone.utc) if dt else datetime.min.replace(tzinfo=timezone.utc)
 
 
 # ---------------------------------------------------------------------------
-# Parallel news fetcher
+# Parallel fetch + cache refresh
 # ---------------------------------------------------------------------------
 
-_cached_news: list = []
-_last_fetch_time = None
-_fetch_lock = threading.Lock()
-CACHE_TTL = 300  # 5 minutes
-
-
-def _fetch_all_parallel(queries_lang_pairs: list, cutoff, seen: set) -> list:
-    """
-    Fetch all (query, lang) pairs in parallel using ThreadPoolExecutor.
-    Returns deduplicated list sorted newest-first.
-    """
-    results_map: dict[int, list] = {}  # preserve insertion order per query
+def _fetch_all() -> list:
+    """Fetch every (query, lang) pair in parallel and return a deduped, sorted list."""
+    pairs = [(q, "vi") for q in VI_QUERIES] + [(q, "en") for q in EN_QUERIES]
+    results: dict[int, list] = {}
 
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
         future_to_idx = {
             executor.submit(fetch_rss, q, lang): i
-            for i, (q, lang) in enumerate(queries_lang_pairs)
+            for i, (q, lang) in enumerate(pairs)
         }
-        for future in as_completed(future_to_idx):
-            idx = future_to_idx[future]
+        for fut in as_completed(future_to_idx):
+            idx = future_to_idx[fut]
             try:
-                results_map[idx] = future.result()
+                results[idx] = fut.result()
             except Exception as e:
-                print(f"[parallel fetch] error index {idx}: {e}")
-                results_map[idx] = []
+                print(f"[fetch] index {idx} error: {e}")
+                results[idx] = []
 
-    # Flatten in original order, deduplicate, apply cutoff
-    all_articles = []
-    local_seen = set(seen)  # copy so we don't mutate the shared set during iteration
-    for i in range(len(queries_lang_pairs)):
-        for a in results_map.get(i, []):
+    cutoff = datetime.now(timezone.utc) - timedelta(days=MAX_AGE_DAYS)
+    seen: set = set()
+    flat: list = []
+    for i in range(len(pairs)):
+        for a in results.get(i, []):
             key = re.sub(r"\s+", " ", a["title"].lower()[:60])
-            if key in local_seen:
+            if key in seen:
                 continue
             dt = a.get("dt")
             if dt and dt.astimezone(timezone.utc) < cutoff:
                 continue
-            local_seen.add(key)
-            all_articles.append(a)
+            seen.add(key)
+            flat.append(a)
 
-    # Update shared seen set
-    seen.update(local_seen)
+    flat.sort(key=_sort_key, reverse=True)
 
-    all_articles.sort(key=sort_key, reverse=True)
-    return all_articles
+    vi_items = [a for a in flat if a["lang"] == "vi"][:MAX_VI]
+    en_items = [a for a in flat if a["lang"] == "en"][:MAX_EN]
+    final = vi_items + en_items
+
+    # Strip non-serializable datetime field
+    for a in final:
+        a.pop("dt", None)
+
+    return final
 
 
-def get_news() -> list:
-    global _cached_news, _last_fetch_time
-
-    now = datetime.now(timezone.utc)
-
-    # Fast path: return fresh cache (no lock needed for read)
-    if _cached_news and _last_fetch_time and (now - _last_fetch_time).total_seconds() < CACHE_TTL:
-        return _cached_news
-
-    with _fetch_lock:
-        # Double-check inside lock
-        if _cached_news and _last_fetch_time and (now - _last_fetch_time).total_seconds() < CACHE_TTL:
-            return _cached_news
-
-        t0 = time.time()
-        print(f"[get_news] Fetching at {now.strftime('%H:%M:%S')} UTC ...")
-
-        cutoff = now - timedelta(days=MAX_AGE_DAYS)
-        seen: set = set()
-
-        # Build combined query list: VI first, then EN
-        pairs = [(q, "vi") for q in VI_QUERIES] + [(q, "en") for q in EN_QUERIES]
-        all_articles = _fetch_all_parallel(pairs, cutoff, seen)
-
-        # Split and cap
-        vi_articles = [a for a in all_articles if a["lang"] == "vi"][:MAX_VI]
-        en_articles = [a for a in all_articles if a["lang"] == "en"][:MAX_EN]
-        results = vi_articles + en_articles
-
+def _refresh_cache_once() -> None:
+    """Run one fetch cycle and update cache. Never raises."""
+    t0 = time.time()
+    print(f"[refresh] start at {datetime.now(timezone.utc).strftime('%H:%M:%S')} UTC")
+    try:
+        items = _fetch_all()
         elapsed = time.time() - t0
-        print(f"[get_news] Done in {elapsed:.1f}s — VI={len(vi_articles)}, EN={len(en_articles)}")
+        with _cache_lock:
+            if items:
+                _cache["news"]       = items
+                _cache["fetched_at"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+                _cache["status"]     = "ready"
+                _cache["last_error"] = None
+                print(f"[refresh] OK in {elapsed:.1f}s — {len(items)} articles")
+            else:
+                # Keep previous cache; mark stale if we ever had data
+                if _cache["news"]:
+                    _cache["status"] = "stale"
+                _cache["last_error"] = "fetch returned 0 articles"
+                print(f"[refresh] WARN no articles in {elapsed:.1f}s — keeping previous cache")
+        _save_cache_to_disk()
+    except Exception as e:
+        with _cache_lock:
+            _cache["last_error"] = str(e)
+            if _cache["news"]:
+                _cache["status"] = "stale"
+        print(f"[refresh] ERROR: {e}")
 
-        # Strip non-serializable dt field
-        for a in results:
-            a.pop("dt", None)
 
-        if results:
-            _cached_news = results
-            _last_fetch_time = now
-        else:
-            print("[get_news] No results; returning stale cache.")
-            return _cached_news
+_warmer_started = False
+_warmer_lock = threading.Lock()
 
-        return results
+
+def _start_warmer_thread() -> None:
+    """Start the background warmer exactly once per process."""
+    global _warmer_started
+    with _warmer_lock:
+        if _warmer_started:
+            return
+        _warmer_started = True
+
+    def _loop():
+        while True:
+            _refresh_cache_once()
+            time.sleep(CACHE_TTL)
+
+    t = threading.Thread(target=_loop, name="news-warmer", daemon=True)
+    t.start()
+    print("[warmer] background thread started")
+
+
+# Kick off warming as soon as the module loads (i.e. first request to gunicorn worker)
+_load_cache_from_disk()
+_start_warmer_thread()
 
 
 # ---------------------------------------------------------------------------
@@ -293,66 +357,88 @@ def index():
     return render_template("index.html")
 
 
+@app.route("/api/health")
+def health():
+    """Cheap endpoint for uptime pingers (cron-job.org / UptimeRobot)."""
+    with _cache_lock:
+        return {
+            "status":     _cache["status"],
+            "count":      len(_cache["news"]),
+            "fetched_at": _cache["fetched_at"],
+            "last_error": _cache["last_error"],
+        }
+
+
 @app.route("/api/news")
 def news():
-    try:
-        items = get_news()
-        return {"status": "success", "news": items, "count": len(items)}
-    except Exception as exc:
-        import traceback
-        traceback.print_exc()
-        return {"status": "error", "message": str(exc)}, 500
+    """
+    NEVER blocks on fetch. Returns whatever is currently in the cache.
+    Frontend polls while status='warming'.
+    """
+    with _cache_lock:
+        items      = list(_cache["news"])
+        status     = _cache["status"]
+        fetched_at = _cache["fetched_at"]
+        last_error = _cache["last_error"]
+
+    return {
+        "status":     "success",   # request itself succeeded
+        "cache":      status,      # warming | ready | stale
+        "news":       items,
+        "count":      len(items),
+        "fetched_at": fetched_at,
+        "last_error": last_error,
+    }
 
 
 @app.route("/api/export")
 def export():
-    try:
-        items = get_news()
-        payload = {
-            "source":     "Vietnam Metro & Railway News",
-            "fetched_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "total":      len(items),
-            "vi_count":   sum(1 for a in items if a.get("lang") == "vi"),
-            "en_count":   sum(1 for a in items if a.get("lang") == "en"),
-            "articles":   items,
-        }
-        return Response(
-            _json.dumps(payload, ensure_ascii=False, indent=2),
-            mimetype="application/json; charset=utf-8",
-            headers={"Access-Control-Allow-Origin": "*"},
-        )
-    except Exception as exc:
-        return {"status": "error", "message": str(exc)}, 500
+    with _cache_lock:
+        items = list(_cache["news"])
+    payload = {
+        "source":     "Vietnam Metro & Railway News",
+        "fetched_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "total":      len(items),
+        "vi_count":   sum(1 for a in items if a.get("lang") == "vi"),
+        "en_count":   sum(1 for a in items if a.get("lang") == "en"),
+        "articles":   items,
+    }
+    return Response(
+        _json.dumps(payload, ensure_ascii=False, indent=2),
+        mimetype="application/json; charset=utf-8",
+        headers={"Access-Control-Allow-Origin": "*"},
+    )
 
 
 @app.route("/api/snapshot", methods=["POST"])
 def create_snapshot():
     """Freeze the current articles into a unique shareable URL."""
-    try:
-        items = get_news()
-        snap_id = uuid.uuid4().hex
-        payload = {
-            "source":      "Vietnam Metro & Railway News",
-            "snapshot_id": snap_id,
-            "created_at":  datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "total":       len(items),
-            "vi_count":    sum(1 for a in items if a.get("lang") == "vi"),
-            "en_count":    sum(1 for a in items if a.get("lang") == "en"),
-            "articles":    items,
-        }
-        _snapshots[snap_id] = payload
-        if len(_snapshots) > 20:
-            _snapshots.popitem(last=False)
+    with _cache_lock:
+        items = list(_cache["news"])
 
-        base = request.host_url.rstrip("/")
-        return {"status": "success", "url": f"{base}/snapshot/{snap_id}"}
-    except Exception as exc:
-        return {"status": "error", "message": str(exc)}, 500
+    if not items:
+        return {"status": "error", "message": "Cache is still warming. Try again in a few seconds."}, 503
+
+    snap_id = uuid.uuid4().hex
+    payload = {
+        "source":      "Vietnam Metro & Railway News",
+        "snapshot_id": snap_id,
+        "created_at":  datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "total":       len(items),
+        "vi_count":    sum(1 for a in items if a.get("lang") == "vi"),
+        "en_count":    sum(1 for a in items if a.get("lang") == "en"),
+        "articles":    items,
+    }
+    _snapshots[snap_id] = payload
+    if len(_snapshots) > _SNAPSHOT_CAP:
+        _snapshots.popitem(last=False)
+
+    base = request.host_url.rstrip("/")
+    return {"status": "success", "url": f"{base}/snapshot/{snap_id}"}
 
 
 @app.route("/snapshot/<snap_id>")
 def view_snapshot(snap_id):
-    """Serve a frozen snapshot as JSON."""
     payload = _snapshots.get(snap_id)
     if not payload:
         return {"error": "Snapshot not found or expired."}, 404
