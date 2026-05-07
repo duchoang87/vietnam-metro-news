@@ -444,7 +444,7 @@
     const CACHE_MAX_DAYS = 45;
 
     const FEEDS = [
-      // ---- Section giao thông chuyên biệt — lọc từ khóa metro/đường sắt ----
+      // ---- Section giao thông chuyên biệt — tỉ lệ match cao nhất (VI) ----
       { url: "https://vnexpress.net/rss/giao-thong.rss",     lang: "vi", src: "VnExpress"    },
       { url: "https://tuoitre.vn/rss/giao-thong.rss",        lang: "vi", src: "Tuổi Trẻ"    },
       { url: "https://dantri.com.vn/giao-thong.rss",         lang: "vi", src: "Dân Trí"     },
@@ -486,51 +486,48 @@
     const MAX_EN = 10;
 
     const VI_KW = [
-      // Metro & tàu điện ngầm
-      "metro", "mrt", "tàu điện ngầm", "đường sắt đô thị",
-      "bến thành", "suối tiên", "nhổn", "cát linh",
-      "ga metro", "hầm metro", "trạm metro", "nhà ga metro",
-      "ga ngầm", "ga trên cao", "tuyến metro", "tuyến metro số",
-      // Đường sắt & cao tốc Bắc - Nam
-      "đường sắt", "tàu cao tốc",
-      "đường sắt cao tốc", "đường sắt tốc độ cao", "đường sắt nhẹ",
-      "đường sắt Bắc Nam", "đường sắt Bắc-Nam",
-      "đường sắt khổ tiêu chuẩn", "đường sắt liên vận",
-      "đường sắt liên vùng", "đường sắt quốc gia",
-      "dự án đường sắt",
-      // Cơ quan quản lý / chủ đầu tư
-      "MAUR", "VNR", "Ban Quản lý đường sắt", "Tổng công ty Đường sắt",
-      // Hạ tầng & xây dựng
-      "TOD", "khu depot", "đầu máy toa xe", "chạy thử",
+      // Metro & tàu điện
+      "metro", "mrt", "tàu điện", "tàu điện ngầm", "đường sắt đô thị",
+      "bến thành", "suối tiến", "nhổn", "cát linh", "ga metro", "hầm metro",
+      "trạm metro", "nhà ga metro", "ga ngầm", "ga trên cao", "tuyến metro",
+      // Đường sắt
+      "đường sắt", "đường ray", "đường sắt cao tốc", "đường sắt nhẹ",
+      "đường sắt quốc gia", "đường sắt liên vùng", "đường sắt tốc độ cao",
+      "tàu cao tốc", "tàu chạy thử", "tàu hỏa", "dự án đường sắt",
+      // Hạ tầng & đầu tư
+      "hạ tầng giao thông", "dự án giao thông", "đầu tư hạ tầng",
+      "công trình giao thông", "vốn đầu tư giao thông", "vốn ODA giao thông",
+      // Tốc độ cao & liên vùng
+      "tốc độ cao", "liên vùng", "kết nối liên vùng",
+      // Khác
+      "TOD", "depot", "khu depot", "đầu máy toa xe", "cầu cạn",
+      "vận tải công cộng", "giao thông đô thị", "vận hành thương mại",
+      "BRT", "xe buýt nhanh", "tuyến số",
     ];
     const EN_KW = [
-      // Metro & rail systems
-      "metro", "mrt", "railway", "subway",
-      "rail line", "rail link", "rail project", "rail network",
+      // Metro & rail
+      "metro", "railway", "rail line", "rail project", "rail network",
       "metro line", "metro station", "metro system", "metro construction",
-      // High-speed & long-distance
-      "high-speed rail", "high speed rail", "high-speed train",
-      "north-south rail", "north-south railway", "bullet train",
-      // Light rail / mono
-      "light rail", "lrt", "monorail",
-      // Transit infrastructure
+      "high-speed rail", "high speed rail", "mrt", "subway", "underground",
+      "light rail", "lrt", "tram", "monorail", "hyperloop",
+      // Transit
+      "mass transit", "public transit", "urban transit", "rapid transit",
       "transit project", "transit system", "transit infrastructure",
-      "commuter rail", "passenger rail",
-      // Investment & development
-      "rail investment", "rail corridor", "rolling stock",
-      "transit-oriented development",
+      "commuter rail", "passenger rail", "rail investment", "rail corridor",
+      // Infrastructure finance
+      "transport infrastructure", "urban transport", "urban mobility",
+      "rail corridor", "transport project", "infrastructure financing",
+      // Other
+      "rolling stock", "viaduct", "bullet train",
+      "transit-oriented development", "transportation infrastructure",
     ];
 
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
 
-    function isRelevant(title, lang, feedSrc) {
+    function isRelevant(title, lang) {
       const t = title.toLowerCase();
-      // Các tổ chức phát triển quốc tế: cũng chấp nhận nếu đề cập Việt Nam
-      if (feedSrc === "AIIB" || feedSrc === "ADB" || feedSrc === "ASEAN") {
-        return t.includes("viet") || EN_KW.some(kw => t.includes(kw));
-      }
       return (lang === "vi" ? VI_KW : EN_KW).some(kw => t.includes(kw));
     }
 
@@ -541,24 +538,19 @@
         ? "Metro" : "Railway";
     }
 
-    function locate(title, lang) {
+    function locate(title) {
       const t = title.toLowerCase();
-      if (["ho chi minh", "hcmc", "saigon", "sài gòn", "tphcm", "tp.hcm", "bến thành", "suối tiên"]
+      if (["ho chi minh", "hcmc", "saigon", "sài gòn", "tphcm", "tp.hcm", "bến thành", "suối tiến"]
         .some(k => t.includes(k))) return "Ho Chi Minh City";
       if (["hanoi", "hà nội", "cát linh", "nhổn"].some(k => t.includes(k))) return "Hanoi";
       if (["đà nẵng", "da nang"].some(k => t.includes(k))) return "Da Nang";
-      if (["hải phòng", "hai phong"].some(k => t.includes(k))) return "Hai Phong";
-      if (["quảng ninh", "quang ninh"].some(k => t.includes(k))) return "Quang Ninh";
-      if (["đồng nai", "dong nai"].some(k => t.includes(k))) return "Dong Nai";
-      // EN articles about other countries should not default to Vietnam
-      return lang === "en" ? "International" : "Vietnam";
+      return "Vietnam";
     }
 
     function ageAgo(dateStr) {
       if (!dateStr) return "";
       const d = new Date(dateStr);
-      // Reject epoch-like dates (AIIB/ADB sometimes publish with missing pubDate → parsed as ~1970)
-      if (isNaN(d) || d.getFullYear() < 2000) return "";
+      if (isNaN(d)) return "";
       const s = Math.floor((Date.now() - d) / 1000);
       if (s < 3600) { const m = Math.max(1, Math.floor(s / 60)); return `${m} minute${m !== 1 ? "s" : ""} ago`; }
       if (s < 86400) { const h = Math.floor(s / 3600); return `${h} hour${h !== 1 ? "s" : ""} ago`; }
@@ -568,7 +560,7 @@
     function formatDate(dateStr) {
       if (!dateStr) return "";
       const d = new Date(dateStr);
-      if (isNaN(d) || d.getFullYear() < 2000) return "";
+      if (isNaN(d)) return dateStr.slice(0, 16);
       return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
     }
 
@@ -601,7 +593,7 @@
           const linkEl = item.querySelector("link");
           if (linkEl) link = linkEl.textContent?.trim() || linkEl.getAttribute("href") || "";
           return { title, link, pubDate, source: feed.src, lang: feed.lang };
-        }).filter(a => a.title && isRelevant(a.title, feed.lang, feed.src));
+        }).filter(a => a.title && isRelevant(a.title, feed.lang));
       } catch (_) {
         return [];
       }
@@ -616,9 +608,8 @@
     }
 
     function mergeWithCache(fresh) {
-      // Load ALL cached articles — no date expiry on read.
-      // Articles age out naturally when pushed past the 150-article cap.
-      const cached = loadCache();
+      const cutoff = Date.now() - CACHE_MAX_DAYS * 86400000;
+      const cached = loadCache().filter(a => new Date(a.pubDate) > cutoff);
       const seen = new Set(fresh.map(a => a.title.toLowerCase().slice(0, 60).replace(/\s+/g, " ")));
       const merged = [...fresh, ...cached.filter(a => {
         const key = a.title.toLowerCase().slice(0, 60).replace(/\s+/g, " ");
@@ -626,16 +617,7 @@
         seen.add(key);
         return true;
       })];
-      // Sort newest-first; push articles with missing/invalid dates to the end
-      merged.sort((a, b) => {
-        const da = new Date(a.pubDate), db = new Date(b.pubDate);
-        const va = !isNaN(da.getTime()), vb = !isNaN(db.getTime());
-        if (!va && !vb) return 0;
-        if (!va) return 1;
-        if (!vb) return -1;
-        return db - da;
-      });
-      // Cap storage: keep newest 150 (oldest naturally drop out over time)
+      merged.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
       localStorage.setItem(CACHE_KEY, JSON.stringify(merged.slice(0, 150)));
       return merged;
     }
@@ -682,7 +664,7 @@
           <div class="card-title">${titleHtml}</div>
           <div class="card-meta">
             <span class="loc">📍 ${item.location}</span>
-            <span>${item.source ? item.source + " · " : ""}${item.age || item.date || "—"}</span>
+            <span>${item.source ? item.source + " · " : ""}${item.age || item.date}</span>
           </div>
         </div>
       </div>`;
@@ -710,24 +692,22 @@
           return true;
         });
 
-        // Merge raw articles với localStorage cache trước khi enrich
-        // (cache lưu raw để tránh stale age/date khi đọc lại)
-        const merged = mergeWithCache(deduped);
-
-        // Enrich toàn bộ merged pool
-        const enriched = merged.map(a => ({
+        // Enrich with computed fields
+        const enriched = deduped.map(a => ({
           ...a,
           date: formatDate(a.pubDate),
           age: ageAgo(a.pubDate),
           category: categorize(a.title),
-          location: locate(a.title, a.lang),
+          location: locate(a.title),
         }));
 
         // Sort newest-first
         enriched.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
 
-        const vi = enriched.filter(a => a.lang === "vi").slice(0, MAX_VI);
-        const en = enriched.filter(a => a.lang === "en").slice(0, MAX_EN);
+        // Merge với localStorage cache để tích lũy bài qua nhiều lần truy cập
+        const merged = mergeWithCache(enriched);
+        const vi = merged.filter(a => a.lang === "vi").slice(0, MAX_VI);
+        const en = merged.filter(a => a.lang === "en").slice(0, MAX_EN);
         allNews = [...vi, ...en];
 
         if (!allNews.length) throw new Error("No relevant articles found. Try again later.");
