@@ -6,7 +6,7 @@ import urllib.parse
 import urllib.request
 import uuid
 import xml.etree.ElementTree as ET
-import concurrent.futures
+import time
 from collections import OrderedDict
 from datetime import datetime, timezone, timedelta
 from email.utils import parsedate_to_datetime
@@ -162,26 +162,24 @@ def locate(title):
     return "Vietnam"
 
 
-def _collect(queries, lang, limit, cutoff, seen):
-    """Fetch ALL queries (so every topic gets a chance), then return the newest `limit` articles."""
+def _collect(queries, lang, limit, cutoff, seen, start_time, time_limit):
+    """Fetch ALL queries sequentially. Abort if taking too long to prevent 502."""
     results = []
     
-    with concurrent.futures.ThreadPoolExecutor(max_workers=min(len(queries), 10)) as executor:
-        future_to_query = {executor.submit(fetch_rss, query, lang): query for query in queries}
-        for future in concurrent.futures.as_completed(future_to_query):
-            try:
-                articles = future.result()
-                for a in articles:
-                    key = re.sub(r"\s+", " ", a["title"].lower()[:60])
-                    if key in seen:
-                        continue
-                    dt = a.get("dt")
-                    if dt and dt.astimezone(timezone.utc) < cutoff:
-                        continue
-                    seen.add(key)
-                    results.append(a)
-            except Exception:
-                pass
+    for query in queries:
+        if time.time() - start_time > time_limit:
+            print(f"Time limit exceeded in _collect ({lang}). Aborting early.")
+            break
+            
+        for a in fetch_rss(query, lang=lang):
+            key = re.sub(r"\s+", " ", a["title"].lower()[:60])
+            if key in seen:
+                continue
+            dt = a.get("dt")
+            if dt and dt.astimezone(timezone.utc) < cutoff:
+                continue
+            seen.add(key)
+            results.append(a)
                 
     # Sort newest-first, then cap
     results.sort(key=sort_key, reverse=True)
@@ -203,16 +201,22 @@ def get_news():
     if _cached_news and _last_fetch_time and (now - _last_fetch_time).total_seconds() < CACHE_TTL:
         return _cached_news
 
+    start_time = time.time()
+    time_limit = 22 # Gunicorn timeout is 30s, we stop at 22s
     cutoff = datetime.now(timezone.utc) - timedelta(days=MAX_AGE_DAYS)
     seen   = set()
-    vi = _collect(VI_QUERIES, "vi", MAX_VI, cutoff, seen)
-    en = _collect(EN_QUERIES, "en", MAX_EN, cutoff, seen)
+    
+    vi = _collect(VI_QUERIES, "vi", MAX_VI, cutoff, seen, start_time, time_limit)
+    en = _collect(EN_QUERIES, "en", MAX_EN, cutoff, seen, start_time, time_limit)
+    
     results = vi + en
     for a in results:
         a.pop("dt", None)
         
-    _cached_news = results
-    _last_fetch_time = now
+    if results:
+        _cached_news = results
+        _last_fetch_time = now
+        
     return results
 
 
