@@ -6,6 +6,7 @@ import urllib.parse
 import urllib.request
 import uuid
 import xml.etree.ElementTree as ET
+import concurrent.futures
 from collections import OrderedDict
 from datetime import datetime, timezone, timedelta
 from email.utils import parsedate_to_datetime
@@ -164,16 +165,24 @@ def locate(title):
 def _collect(queries, lang, limit, cutoff, seen):
     """Fetch ALL queries (so every topic gets a chance), then return the newest `limit` articles."""
     results = []
-    for query in queries:
-        for a in fetch_rss(query, lang=lang):
-            key = re.sub(r"\s+", " ", a["title"].lower()[:60])
-            if key in seen:
-                continue
-            dt = a.get("dt")
-            if dt and dt.astimezone(timezone.utc) < cutoff:
-                continue
-            seen.add(key)
-            results.append(a)
+    
+    with concurrent.futures.ThreadPoolExecutor(max_workers=min(len(queries), 10)) as executor:
+        future_to_query = {executor.submit(fetch_rss, query, lang): query for query in queries}
+        for future in concurrent.futures.as_completed(future_to_query):
+            try:
+                articles = future.result()
+                for a in articles:
+                    key = re.sub(r"\s+", " ", a["title"].lower()[:60])
+                    if key in seen:
+                        continue
+                    dt = a.get("dt")
+                    if dt and dt.astimezone(timezone.utc) < cutoff:
+                        continue
+                    seen.add(key)
+                    results.append(a)
+            except Exception:
+                pass
+                
     # Sort newest-first, then cap
     results.sort(key=sort_key, reverse=True)
     return results[:limit]
