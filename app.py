@@ -24,12 +24,32 @@ _UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
 
 # Chỉ cho phép fetch từ các nguồn báo đã whitelist
 _ALLOWED_HOSTS = {
+    # Vietnamese news
     "vnexpress.net",
     "e.vnexpress.net",
     "tuoitre.vn",
     "thanhnien.vn",
     "vtv.vn",
     "dantri.com.vn",
+    # Vietnamese financial / investment
+    "cafef.vn",
+    "baodautu.vn",
+    "nld.com.vn",
+    "sggp.org.vn",
+    "kinhtedothi.vn",
+    "laodong.vn",
+    "ndh.vn",
+    # Vietnamese government
+    "baochinhphu.vn",
+    "chinhphu.vn",
+    "mt.gov.vn",
+    "moc.gov.vn",
+    "mof.gov.vn",
+    # International development organisations
+    "aiib.org",
+    "adb.org",
+    "worldbank.org",
+    "asean.org",
 }
 
 _snapshots: "OrderedDict[str, dict]" = OrderedDict()
@@ -58,8 +78,10 @@ def proxy():
         return Response("invalid url", status=400)
 
     parsed = urllib.parse.urlparse(url)
-    host = (parsed.hostname or "").lstrip("www.")
-    if host not in _ALLOWED_HOSTS:
+    hostname = parsed.hostname or ""
+    # Strip www. and check against whitelist (also allow subdomains like e.vnexpress.net)
+    host = hostname.lstrip("www.")
+    if host not in _ALLOWED_HOSTS and not any(host.endswith("." + h) for h in _ALLOWED_HOSTS):
         return Response("host not allowed", status=403)
 
     try:

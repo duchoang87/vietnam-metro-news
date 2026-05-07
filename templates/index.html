@@ -1,11 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Vietnam Metro & Railway News</title>
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -19,12 +26,25 @@
       color: white;
       padding: 28px 24px;
       text-align: center;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
     }
-    header h1 { font-size: 1.8rem; font-weight: 700; }
-    header p  { margin-top: 6px; opacity: 0.85; font-size: 0.9rem; }
 
-    main { max-width: 1000px; margin: 0 auto; padding: 28px 16px; }
+    header h1 {
+      font-size: 1.8rem;
+      font-weight: 700;
+    }
+
+    header p {
+      margin-top: 6px;
+      opacity: 0.85;
+      font-size: 0.9rem;
+    }
+
+    main {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 28px 16px;
+    }
 
     .toolbar {
       display: flex;
@@ -34,6 +54,7 @@
       flex-wrap: wrap;
       gap: 10px;
     }
+
     .refresh-btn {
       padding: 9px 22px;
       background: #d62828;
@@ -44,8 +65,15 @@
       cursor: pointer;
       transition: background 0.2s;
     }
-    .refresh-btn:hover { background: #a01010; }
-    .refresh-btn:disabled { background: #a0aec0; cursor: not-allowed; }
+
+    .refresh-btn:hover {
+      background: #a01010;
+    }
+
+    .refresh-btn:disabled {
+      background: #a0aec0;
+      cursor: not-allowed;
+    }
 
     .export-btn {
       padding: 9px 22px;
@@ -57,28 +85,52 @@
       cursor: pointer;
       transition: background 0.2s;
     }
-    .export-btn:hover { background: #1d4ed8; }
+
+    .export-btn:hover {
+      background: #1d4ed8;
+    }
 
     /* Export modal */
     .modal-overlay {
       display: none;
-      position: fixed; inset: 0;
-      background: rgba(0,0,0,0.45);
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.45);
       z-index: 100;
       align-items: center;
       justify-content: center;
     }
-    .modal-overlay.open { display: flex; }
+
+    .modal-overlay.open {
+      display: flex;
+    }
+
     .modal {
       background: white;
       border-radius: 12px;
       padding: 28px;
       width: min(520px, 92vw);
-      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
     }
-    .modal h2 { font-size: 1.1rem; font-weight: 700; margin-bottom: 6px; }
-    .modal p  { font-size: 0.85rem; color: #718096; margin-bottom: 16px; }
-    .url-row { display: flex; gap: 8px; align-items: center; }
+
+    .modal h2 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .modal p {
+      font-size: 0.85rem;
+      color: #718096;
+      margin-bottom: 16px;
+    }
+
+    .url-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
     .url-box {
       flex: 1;
       padding: 9px 12px;
@@ -90,6 +142,7 @@
       word-break: break-all;
       font-family: monospace;
     }
+
     .copy-btn {
       padding: 9px 16px;
       background: #2563eb;
@@ -101,8 +154,15 @@
       white-space: nowrap;
       transition: background 0.2s;
     }
-    .copy-btn:hover  { background: #1d4ed8; }
-    .copy-btn.copied { background: #059669; }
+
+    .copy-btn:hover {
+      background: #1d4ed8;
+    }
+
+    .copy-btn.copied {
+      background: #059669;
+    }
+
     .open-btn {
       display: block;
       margin-top: 10px;
@@ -115,7 +175,11 @@
       text-decoration: none;
       transition: background 0.15s;
     }
-    .open-btn:hover { background: #f0f4f8; }
+
+    .open-btn:hover {
+      background: #f0f4f8;
+    }
+
     .modal-note {
       margin-top: 14px;
       font-size: 0.78rem;
@@ -123,6 +187,7 @@
       border-top: 1px solid #e2e8f0;
       padding-top: 12px;
     }
+
     .close-btn {
       float: right;
       background: none;
@@ -133,12 +198,24 @@
       line-height: 1;
       margin-top: -4px;
     }
-    .close-btn:hover { color: #4a5568; }
 
-    .meta { font-size: 0.8rem; color: #718096; }
+    .close-btn:hover {
+      color: #4a5568;
+    }
+
+    .meta {
+      font-size: 0.8rem;
+      color: #718096;
+    }
 
     /* Filter pills */
-    .filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+    .filters {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+
     .pill {
       padding: 5px 14px;
       border-radius: 20px;
@@ -149,22 +226,47 @@
       transition: all 0.15s;
       color: #4a5568;
     }
-    .pill.active, .pill:hover { color: white; border-color: transparent; }
-    .pill[data-cat="All"].active     { background: #2d3748; }
-    .pill[data-cat="Metro"].active   { background: #2563eb; }
-    .pill[data-cat="Railway"].active { background: #059669; }
+
+    .pill.active,
+    .pill:hover {
+      color: white;
+      border-color: transparent;
+    }
+
+    .pill[data-cat="All"].active {
+      background: #2d3748;
+    }
+
+    .pill[data-cat="Metro"].active {
+      background: #2563eb;
+    }
+
+    .pill[data-cat="Railway"].active {
+      background: #059669;
+    }
 
     /* Status */
-    #status { text-align: center; padding: 48px 20px; color: #718096; }
+    #status {
+      text-align: center;
+      padding: 48px 20px;
+      color: #718096;
+    }
+
     .spinner {
-      width: 40px; height: 40px;
+      width: 40px;
+      height: 40px;
       border: 4px solid #e2e8f0;
       border-top-color: #d62828;
       border-radius: 50%;
       animation: spin 0.75s linear infinite;
       margin: 0 auto 14px;
     }
-    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
 
     /* Grid */
     .grid {
@@ -172,17 +274,25 @@
       grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
       gap: 18px;
     }
+
     .card {
       background: white;
       border-radius: 10px;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
       overflow: hidden;
       display: flex;
       flex-direction: column;
       transition: transform 0.15s, box-shadow 0.15s;
     }
-    .card:hover { transform: translateY(-3px); box-shadow: 0 6px 18px rgba(0,0,0,0.12); }
-    .card.hidden { display: none; }
+
+    .card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+    }
+
+    .card.hidden {
+      display: none;
+    }
 
     .card-tag {
       padding: 5px 14px;
@@ -195,21 +305,49 @@
       justify-content: space-between;
       align-items: center;
     }
+
     .lang-badge {
       font-size: 0.65rem;
       opacity: 0.9;
-      background: rgba(0,0,0,0.2);
+      background: rgba(0, 0, 0, 0.2);
       border-radius: 4px;
       padding: 1px 6px;
       letter-spacing: 0;
     }
-    .tag-Metro   { background: #2563eb; }
-    .tag-Railway { background: #059669; }
 
-    .card-body { padding: 15px; flex: 1; display: flex; flex-direction: column; gap: 8px; }
-    .card-title { font-size: 0.95rem; font-weight: 700; line-height: 1.4; color: #1a202c; }
-    .card-title a { color: inherit; text-decoration: none; }
-    .card-title a:hover { text-decoration: underline; color: #d62828; }
+    .tag-Metro {
+      background: #2563eb;
+    }
+
+    .tag-Railway {
+      background: #059669;
+    }
+
+    .card-body {
+      padding: 15px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .card-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      line-height: 1.4;
+      color: #1a202c;
+    }
+
+    .card-title a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .card-title a:hover {
+      text-decoration: underline;
+      color: #d62828;
+    }
+
     .card-meta {
       display: flex;
       justify-content: space-between;
@@ -219,7 +357,11 @@
       padding-top: 8px;
       border-top: 1px solid #f0f4f8;
     }
-    .card-meta .loc { font-weight: 600; color: #718096; }
+
+    .card-meta .loc {
+      font-weight: 600;
+      color: #718096;
+    }
 
     .error-box {
       text-align: center;
@@ -229,319 +371,347 @@
       border-radius: 8px;
       color: #c53030;
     }
-    .no-results { text-align: center; padding: 40px; color: #718096; grid-column: 1/-1; }
+
+    .no-results {
+      text-align: center;
+      padding: 40px;
+      color: #718096;
+      grid-column: 1/-1;
+    }
   </style>
 </head>
+
 <body>
 
-<header>
-  <h1>🚇 Vietnam Metro &amp; Railway News</h1>
-  <p style="margin-top:6px; font-size:0.85rem; opacity:0.75;">Made by H.T.Đức and for his friends</p>
-</header>
+  <header>
+    <h1>🚇 Vietnam Metro &amp; Railway News</h1>
+    <p style="margin-top:6px; font-size:0.85rem; opacity:0.75;">Made by H.T.Đức and for his friends</p>
+  </header>
 
-<main>
-  <div id="status">
-    <div class="spinner"></div>
-    <p>Fetching latest news…</p>
-  </div>
+  <main>
+    <div id="status">
+      <div class="spinner"></div>
+      <p>Fetching latest news…</p>
+    </div>
 
-  <div id="app" style="display:none">
-    <div class="toolbar">
-      <div class="filters" id="filters"></div>
-      <div style="display:flex;gap:10px;align-items:center">
-        <span class="meta" id="meta"></span>
-        <button class="export-btn" onclick="openExport()">🔗 Live Link</button>
-        <button class="refresh-btn" id="refresh-btn" onclick="loadNews()">⟳ Refresh</button>
+    <div id="app" style="display:none">
+      <div class="toolbar">
+        <div class="filters" id="filters"></div>
+        <div style="display:flex;gap:10px;align-items:center">
+          <span class="meta" id="meta"></span>
+          <button class="export-btn" onclick="openExport()">🔗 Live Link</button>
+          <button class="refresh-btn" id="refresh-btn" onclick="loadNews()">⟳ Refresh</button>
+        </div>
+      </div>
+      <div class="grid" id="grid"></div>
+    </div>
+  </main>
+
+  <!-- Export modal -->
+  <div class="modal-overlay" id="modal-overlay" onclick="closeExportOnBg(event)">
+    <div class="modal">
+      <button class="close-btn" onclick="closeExport()">×</button>
+      <h2>🔗 Content Snapshot Link</h2>
+      <p>Generates a unique URL containing the current articles — frozen in time. Import into Make, Zapier, n8n, or any
+        HTTP client.</p>
+      <div id="modal-generating" style="display:none;text-align:center;padding:16px 0;color:#718096;font-size:0.88rem">
+        <div class="spinner" style="width:28px;height:28px;border-width:3px;margin-bottom:8px"></div>
+        Creating snapshot…
+      </div>
+      <div id="modal-result" style="display:none">
+        <div class="url-row">
+          <div class="url-box" id="export-url"></div>
+          <button class="copy-btn" id="copy-btn" onclick="copyUrl()">Copy</button>
+        </div>
+        <a class="open-btn" id="open-link" href="#" target="_blank" rel="noopener">↗ Open / preview JSON in browser</a>
+      </div>
+      <div class="modal-note">
+        <strong>Fields per article:</strong> title, link, source, date, age, lang (vi/en), category, location<br>
+        <strong>Note:</strong> snapshot stays valid until the server restarts · CORS enabled
       </div>
     </div>
-    <div class="grid" id="grid"></div>
   </div>
-</main>
 
-<!-- Export modal -->
-<div class="modal-overlay" id="modal-overlay" onclick="closeExportOnBg(event)">
-  <div class="modal">
-    <button class="close-btn" onclick="closeExport()">×</button>
-    <h2>🔗 Content Snapshot Link</h2>
-    <p>Generates a unique URL containing the current articles — frozen in time. Import into Make, Zapier, n8n, or any HTTP client.</p>
-    <div id="modal-generating" style="display:none;text-align:center;padding:16px 0;color:#718096;font-size:0.88rem">
-      <div class="spinner" style="width:28px;height:28px;border-width:3px;margin-bottom:8px"></div>
-      Creating snapshot…
-    </div>
-    <div id="modal-result" style="display:none">
-      <div class="url-row">
-        <div class="url-box" id="export-url"></div>
-        <button class="copy-btn" id="copy-btn" onclick="copyUrl()">Copy</button>
-      </div>
-      <a class="open-btn" id="open-link" href="#" target="_blank" rel="noopener">↗ Open / preview JSON in browser</a>
-    </div>
-    <div class="modal-note">
-      <strong>Fields per article:</strong> title, link, source, date, age, lang (vi/en), category, location<br>
-      <strong>Note:</strong> snapshot stays valid until the server restarts · CORS enabled
-    </div>
-  </div>
-</div>
+  <script>
+    // -------------------------------------------------------------------------
+    // Config
+    // -------------------------------------------------------------------------
 
-<script>
-  // -------------------------------------------------------------------------
-  // Config
-  // -------------------------------------------------------------------------
+    // Dùng Flask server làm RSS proxy (/proxy?url=...) — cùng origin,
+    // không cần CORS proxy ngoài, không bị AdBlock chặn.
+    const RSS_PROXY = "/proxy?url=";
 
-  // Dùng Flask server làm RSS proxy (/proxy?url=...) — cùng origin,
-  // không cần CORS proxy ngoài, không bị AdBlock chặn.
-  const RSS_PROXY = "/proxy?url=";
+    const FEEDS = [
+      // ---- Báo tổng hợp (VI) ----
+      { url: "https://vnexpress.net/rss/thoi-su.rss",        lang: "vi", src: "VnExpress"    },
+      { url: "https://vnexpress.net/rss/kinh-te.rss",        lang: "vi", src: "VnExpress"    },
+      { url: "https://vnexpress.net/rss/giao-thong.rss",     lang: "vi", src: "VnExpress"    },
+      { url: "https://tuoitre.vn/rss/thoi-su.rss",           lang: "vi", src: "Tuổi Trẻ"    },
+      { url: "https://tuoitre.vn/rss/kinh-te.rss",           lang: "vi", src: "Tuổi Trẻ"    },
+      { url: "https://thanhnien.vn/rss/home.rss",            lang: "vi", src: "Thanh Niên"   },
+      { url: "https://vtv.vn/trong-nuoc.rss",                lang: "vi", src: "VTV"          },
+      { url: "https://dantri.com.vn/xa-hoi.rss",             lang: "vi", src: "Dân Trí"     },
+      { url: "https://nld.com.vn/rss/home.rss",              lang: "vi", src: "Người LĐ"    },
+      { url: "https://www.sggp.org.vn/rss/kinhte-89.rss",   lang: "vi", src: "SGGP"         },
+      // ---- Báo tài chính / đầu tư (VI) ----
+      { url: "https://cafef.vn/home.rss",                    lang: "vi", src: "CafeF"        },
+      { url: "https://baodautu.vn/trang-chu.rss",            lang: "vi", src: "Báo Đầu Tư"  },
+      { url: "https://kinhtedothi.vn/rss.rss",               lang: "vi", src: "KT&ĐT"       },
+      // ---- Báo chính phủ / nhà nước (VI) ----
+      { url: "https://baochinhphu.vn/rss/",                  lang: "vi", src: "Báo CP"       },
+      // ---- Báo tiếng Anh trong nước ----
+      { url: "https://e.vnexpress.net/rss/news.rss",         lang: "en", src: "VnExpress EN" },
+      { url: "https://e.vnexpress.net/rss/business.rss",     lang: "en", src: "VnExpress EN" },
+      // ---- Tổ chức phát triển quốc tế (EN) ----
+      { url: "https://www.aiib.org/en/rss/aiib-news-rss.xml",              lang: "en", src: "AIIB" },
+      { url: "https://www.aiib.org/en/rss/aiib-projects-approved-rss.xml", lang: "en", src: "AIIB" },
+      { url: "https://www.adb.org/news.rss",                 lang: "en", src: "ADB"          },
+    ];
 
-  const FEEDS = [
-    { url: "https://vnexpress.net/rss/thoi-su.rss",    lang: "vi", src: "VnExpress"   },
-    { url: "https://vnexpress.net/rss/kinh-te.rss",    lang: "vi", src: "VnExpress"   },
-    { url: "https://vnexpress.net/rss/giao-thong.rss", lang: "vi", src: "VnExpress"   },
-    { url: "https://tuoitre.vn/rss/thoi-su.rss",       lang: "vi", src: "Tuổi Trẻ"   },
-    { url: "https://tuoitre.vn/rss/kinh-te.rss",       lang: "vi", src: "Tuổi Trẻ"   },
-    { url: "https://thanhnien.vn/rss/home.rss",        lang: "vi", src: "Thanh Niên"  },
-    { url: "https://vtv.vn/trong-nuoc.rss",            lang: "vi", src: "VTV"         },
-    { url: "https://dantri.com.vn/xa-hoi.rss",         lang: "vi", src: "Dân Trí"    },
-    { url: "https://e.vnexpress.net/rss/news.rss",     lang: "en", src: "VnExpress EN"},
-    { url: "https://e.vnexpress.net/rss/business.rss", lang: "en", src: "VnExpress EN"},
-  ];
+    const MAX_VI = 30;
+    const MAX_EN = 20;
 
-  const MAX_VI = 20;
-  const MAX_EN = 10;
+    const VI_KW = [
+      "metro", "mrt", "tàu điện", "bến thành", "suối tiến", "nhổn", "cát linh",
+      "đường sắt", "tốc độ cao", "đường ray", "đường sắt cao tốc", "đường sắt đô thị", "TOD", "tàu điện ngầm", "đường sắt nhẹ", "xe điện mặt đất", "tàu cao tốc",
+      "ga ngầm", "ga trên cao", "nhà ga metro", "cầu cạn", "depot", "khu depot",
+      "đầu máy toa xe", "tuyến số", "đường sắt quốc gia", "vận tải công cộng", "giao thông đô thị", "vận hành thương mại",
+    ];
+    const EN_KW = [
+      "metro", "railway", "rail line", "rail project", "rail network",
+      "high-speed rail", "high speed rail", "mrt", "metro line", "metro station", "subway", "underground", "light rail", "LRT", "tram", "monorail",
+      "mass transit", "public transport", "urban transit", "bullet train",
+      "rolling stock", "viaduct", "elevated station", "underground station",
+      "transit-oriented development", "mobility", "transportation infrastructure",
+    ];
 
-  const VI_KW = [
-    "metro", "mrt", "tàu điện", "bến thành", "suối tiến", "nhổn", "cát linh",
-    "đường sắt", "tốc độ cao", "đường ray", "đường sắt cao tốc", "đường sắt đô thị",
-  ];
-  const EN_KW = [
-    "metro", "railway", "rail line", "rail project", "rail network",
-    "high-speed rail", "high speed rail", "mrt", "metro line", "metro station",
-  ];
+    // -------------------------------------------------------------------------
+    // Helpers
+    // -------------------------------------------------------------------------
 
-  // -------------------------------------------------------------------------
-  // Helpers
-  // -------------------------------------------------------------------------
+    function isRelevant(title, lang) {
+      const t = title.toLowerCase();
+      return (lang === "vi" ? VI_KW : EN_KW).some(kw => t.includes(kw));
+    }
 
-  function isRelevant(title, lang) {
-    const t = title.toLowerCase();
-    return (lang === "vi" ? VI_KW : EN_KW).some(kw => t.includes(kw));
-  }
+    function categorize(title) {
+      const t = title.toLowerCase();
+      return ["metro", "mrt", "bến thành", "suối tiến", "nhổn", "cát linh",
+        "tàu điện", "đường sắt đô thị"].some(k => t.includes(k))
+        ? "Metro" : "Railway";
+    }
 
-  function categorize(title) {
-    const t = title.toLowerCase();
-    return ["metro","mrt","bến thành","suối tiến","nhổn","cát linh",
-            "tàu điện","đường sắt đô thị"].some(k => t.includes(k))
-      ? "Metro" : "Railway";
-  }
-
-  function locate(title) {
-    const t = title.toLowerCase();
-    if (["ho chi minh","hcmc","saigon","sài gòn","tphcm","tp.hcm","bến thành","suối tiến"]
+    function locate(title) {
+      const t = title.toLowerCase();
+      if (["ho chi minh", "hcmc", "saigon", "sài gòn", "tphcm", "tp.hcm", "bến thành", "suối tiến"]
         .some(k => t.includes(k))) return "Ho Chi Minh City";
-    if (["hanoi","hà nội","cát linh","nhổn"].some(k => t.includes(k))) return "Hanoi";
-    if (["đà nẵng","da nang"].some(k => t.includes(k))) return "Da Nang";
-    return "Vietnam";
-  }
-
-  function ageAgo(dateStr) {
-    if (!dateStr) return "";
-    const d = new Date(dateStr);
-    if (isNaN(d)) return "";
-    const s = Math.floor((Date.now() - d) / 1000);
-    if (s < 3600)  { const m = Math.max(1, Math.floor(s/60));  return `${m} minute${m!==1?"s":""} ago`; }
-    if (s < 86400) { const h = Math.floor(s/3600);             return `${h} hour${h!==1?"s":""} ago`; }
-    const day = Math.floor(s/86400);                           return `${day} day${day!==1?"s":""} ago`;
-  }
-
-  function formatDate(dateStr) {
-    if (!dateStr) return "";
-    const d = new Date(dateStr);
-    if (isNaN(d)) return dateStr.slice(0, 16);
-    return d.toLocaleDateString("en-GB", { day:"2-digit", month:"short", year:"numeric" });
-  }
-
-  // -------------------------------------------------------------------------
-  // RSS fetch via Flask proxy (/proxy?url=...)
-  // -------------------------------------------------------------------------
-
-  async function fetchFeed(feed) {
-    try {
-      const res = await fetch(RSS_PROXY + encodeURIComponent(feed.url),
-                              { signal: AbortSignal.timeout(15000) });
-      if (!res.ok) return [];
-      const xmlText = await res.text();
-      return parseItems(xmlText, feed);
-    } catch (_) {
-      return [];
+      if (["hanoi", "hà nội", "cát linh", "nhổn"].some(k => t.includes(k))) return "Hanoi";
+      if (["đà nẵng", "da nang"].some(k => t.includes(k))) return "Da Nang";
+      return "Vietnam";
     }
-  }
 
-  function parseItems(xmlText, feed) {
-    try {
-      const doc = new DOMParser().parseFromString(xmlText, "text/xml");
-      if (doc.querySelector("parsererror")) return [];
-
-      return [...doc.querySelectorAll("item")].map(item => {
-        const title   = item.querySelector("title")?.textContent?.trim() || "";
-        const pubDate = item.querySelector("pubDate")?.textContent?.trim() || "";
-        // <link> in RSS is often a text node (not an attribute)
-        let link = "";
-        const linkEl = item.querySelector("link");
-        if (linkEl) link = linkEl.textContent?.trim() || linkEl.getAttribute("href") || "";
-        return { title, link, pubDate, source: feed.src, lang: feed.lang };
-      }).filter(a => a.title && isRelevant(a.title, feed.lang));
-    } catch (_) {
-      return [];
+    function ageAgo(dateStr) {
+      if (!dateStr) return "";
+      const d = new Date(dateStr);
+      if (isNaN(d)) return "";
+      const s = Math.floor((Date.now() - d) / 1000);
+      if (s < 3600) { const m = Math.max(1, Math.floor(s / 60)); return `${m} minute${m !== 1 ? "s" : ""} ago`; }
+      if (s < 86400) { const h = Math.floor(s / 3600); return `${h} hour${h !== 1 ? "s" : ""} ago`; }
+      const day = Math.floor(s / 86400); return `${day} day${day !== 1 ? "s" : ""} ago`;
     }
-  }
 
-  // -------------------------------------------------------------------------
-  // Main load
-  // -------------------------------------------------------------------------
-
-  const CATS = ["All", "Metro", "Railway"];
-  let activeCat = "All";
-  let allNews   = [];
-
-  function tagClass(cat) { return "tag-" + cat; }
-
-  function renderFilters() {
-    document.getElementById("filters").innerHTML = CATS.map(c =>
-      `<span class="pill${c===activeCat?" active":""}" data-cat="${c}" onclick="setFilter('${c}')">${c}</span>`
-    ).join("");
-  }
-
-  function setFilter(cat) { activeCat = cat; renderFilters(); applyFilter(); }
-
-  function applyFilter() {
-    document.querySelectorAll(".card").forEach(card => {
-      card.classList.toggle("hidden", activeCat !== "All" && card.dataset.cat !== activeCat);
-    });
-    if (!document.querySelector(".card:not(.hidden)")) {
-      document.getElementById("grid").insertAdjacentHTML(
-        "beforeend", `<p class="no-results">No articles in this category.</p>`);
+    function formatDate(dateStr) {
+      if (!dateStr) return "";
+      const d = new Date(dateStr);
+      if (isNaN(d)) return dateStr.slice(0, 16);
+      return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
     }
-  }
 
-  function renderCard(item) {
-    const titleHtml = item.link
-      ? `<a href="${item.link}" target="_blank" rel="noopener">${item.title}</a>`
-      : item.title;
-    return `
+    // -------------------------------------------------------------------------
+    // RSS fetch via Flask proxy (/proxy?url=...)
+    // -------------------------------------------------------------------------
+
+    async function fetchFeed(feed) {
+      try {
+        const res = await fetch(RSS_PROXY + encodeURIComponent(feed.url),
+          { signal: AbortSignal.timeout(15000) });
+        if (!res.ok) return [];
+        const xmlText = await res.text();
+        return parseItems(xmlText, feed);
+      } catch (_) {
+        return [];
+      }
+    }
+
+    function parseItems(xmlText, feed) {
+      try {
+        const doc = new DOMParser().parseFromString(xmlText, "text/xml");
+        if (doc.querySelector("parsererror")) return [];
+
+        return [...doc.querySelectorAll("item")].map(item => {
+          const title = item.querySelector("title")?.textContent?.trim() || "";
+          const pubDate = item.querySelector("pubDate")?.textContent?.trim() || "";
+          // <link> in RSS is often a text node (not an attribute)
+          let link = "";
+          const linkEl = item.querySelector("link");
+          if (linkEl) link = linkEl.textContent?.trim() || linkEl.getAttribute("href") || "";
+          return { title, link, pubDate, source: feed.src, lang: feed.lang };
+        }).filter(a => a.title && isRelevant(a.title, feed.lang));
+      } catch (_) {
+        return [];
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // Main load
+    // -------------------------------------------------------------------------
+
+    const CATS = ["All", "Metro", "Railway"];
+    let activeCat = "All";
+    let allNews = [];
+
+    function tagClass(cat) { return "tag-" + cat; }
+
+    function renderFilters() {
+      document.getElementById("filters").innerHTML = CATS.map(c =>
+        `<span class="pill${c === activeCat ? " active" : ""}" data-cat="${c}" onclick="setFilter('${c}')">${c}</span>`
+      ).join("");
+    }
+
+    function setFilter(cat) { activeCat = cat; renderFilters(); applyFilter(); }
+
+    function applyFilter() {
+      document.querySelectorAll(".card").forEach(card => {
+        card.classList.toggle("hidden", activeCat !== "All" && card.dataset.cat !== activeCat);
+      });
+      if (!document.querySelector(".card:not(.hidden)")) {
+        document.getElementById("grid").insertAdjacentHTML(
+          "beforeend", `<p class="no-results">No articles in this category.</p>`);
+      }
+    }
+
+    function renderCard(item) {
+      const titleHtml = item.link
+        ? `<a href="${item.link}" target="_blank" rel="noopener">${item.title}</a>`
+        : item.title;
+      return `
       <div class="card" data-cat="${item.category}">
         <div class="card-tag ${tagClass(item.category)}">
           <span>${item.category}</span>
-          <span class="lang-badge">${item.lang==="vi"?"🇻🇳 VI":"🇬🇧 EN"}</span>
+          <span class="lang-badge">${item.lang === "vi" ? "🇻🇳 VI" : "🇬🇧 EN"}</span>
         </div>
         <div class="card-body">
           <div class="card-title">${titleHtml}</div>
           <div class="card-meta">
             <span class="loc">📍 ${item.location}</span>
-            <span>${item.source ? item.source+" · " : ""}${item.age||item.date}</span>
+            <span>${item.source ? item.source + " · " : ""}${item.age || item.date}</span>
           </div>
         </div>
       </div>`;
-  }
+    }
 
-  async function loadNews() {
-    const btn = document.getElementById("refresh-btn");
-    btn.disabled = true;
-    document.getElementById("status").innerHTML =
-      `<div class="spinner"></div><p>Fetching news from ${FEEDS.length} sources…</p>`;
-    document.getElementById("status").style.display = "block";
-    document.getElementById("app").style.display = "none";
-
-    try {
-      // Parallel fetch across all feeds (different servers — no rate-limit risk)
-      const results = await Promise.allSettled(FEEDS.map(fetchFeed));
-      const flat = results.flatMap(r => r.status === "fulfilled" ? r.value : []);
-
-      // Deduplicate by title prefix
-      const seen = new Set();
-      const deduped = flat.filter(a => {
-        const key = a.title.toLowerCase().slice(0, 60).replace(/\s+/g, " ");
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
-      });
-
-      // Enrich with computed fields
-      const enriched = deduped.map(a => ({
-        ...a,
-        date:     formatDate(a.pubDate),
-        age:      ageAgo(a.pubDate),
-        category: categorize(a.title),
-        location: locate(a.title),
-      }));
-
-      // Sort newest-first
-      enriched.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
-
-      // Cap VI + EN separately
-      const vi = enriched.filter(a => a.lang === "vi").slice(0, MAX_VI);
-      const en = enriched.filter(a => a.lang === "en").slice(0, MAX_EN);
-      allNews = [...vi, ...en];
-
-      if (!allNews.length) throw new Error("No relevant articles found. Try again later.");
-
-      document.getElementById("grid").innerHTML = allNews.map(renderCard).join("");
-      document.getElementById("meta").textContent =
-        `${allNews.length} articles (🇻🇳 ${vi.length} · 🇬🇧 ${en.length}) · updated ${new Date().toLocaleTimeString()}`;
-
-      renderFilters();
-      applyFilter();
-      document.getElementById("status").style.display = "none";
-      document.getElementById("app").style.display = "block";
-    } catch (err) {
+    async function loadNews() {
+      const btn = document.getElementById("refresh-btn");
+      btn.disabled = true;
       document.getElementById("status").innerHTML =
-        `<div class="error-box"><strong>Error:</strong> ${err.message}</div>`;
-    } finally {
-      btn.disabled = false;
+        `<div class="spinner"></div><p>Fetching news from ${FEEDS.length} sources…</p>`;
+      document.getElementById("status").style.display = "block";
+      document.getElementById("app").style.display = "none";
+
+      try {
+        // Parallel fetch across all feeds (different servers — no rate-limit risk)
+        const results = await Promise.allSettled(FEEDS.map(fetchFeed));
+        const flat = results.flatMap(r => r.status === "fulfilled" ? r.value : []);
+
+        // Deduplicate by title prefix
+        const seen = new Set();
+        const deduped = flat.filter(a => {
+          const key = a.title.toLowerCase().slice(0, 60).replace(/\s+/g, " ");
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+
+        // Enrich with computed fields
+        const enriched = deduped.map(a => ({
+          ...a,
+          date: formatDate(a.pubDate),
+          age: ageAgo(a.pubDate),
+          category: categorize(a.title),
+          location: locate(a.title),
+        }));
+
+        // Sort newest-first
+        enriched.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
+
+        // Cap VI + EN separately
+        const vi = enriched.filter(a => a.lang === "vi").slice(0, MAX_VI);
+        const en = enriched.filter(a => a.lang === "en").slice(0, MAX_EN);
+        allNews = [...vi, ...en];
+
+        if (!allNews.length) throw new Error("No relevant articles found. Try again later.");
+
+        document.getElementById("grid").innerHTML = allNews.map(renderCard).join("");
+        document.getElementById("meta").textContent =
+          `${allNews.length} articles (🇻🇳 ${vi.length} · 🇬🇧 ${en.length}) · updated ${new Date().toLocaleTimeString()}`;
+
+        renderFilters();
+        applyFilter();
+        document.getElementById("status").style.display = "none";
+        document.getElementById("app").style.display = "block";
+      } catch (err) {
+        document.getElementById("status").innerHTML =
+          `<div class="error-box"><strong>Error:</strong> ${err.message}</div>`;
+      } finally {
+        btn.disabled = false;
+      }
     }
-  }
 
-  // -------------------------------------------------------------------------
-  // Snapshot export (sends current articles to server for a shareable URL)
-  // -------------------------------------------------------------------------
+    // -------------------------------------------------------------------------
+    // Snapshot export (sends current articles to server for a shareable URL)
+    // -------------------------------------------------------------------------
 
-  async function openExport() {
-    document.getElementById("modal-result").style.display    = "none";
-    document.getElementById("modal-generating").style.display = "block";
-    document.getElementById("copy-btn").textContent = "Copy";
-    document.getElementById("copy-btn").classList.remove("copied");
-    document.getElementById("modal-overlay").classList.add("open");
+    async function openExport() {
+      document.getElementById("modal-result").style.display = "none";
+      document.getElementById("modal-generating").style.display = "block";
+      document.getElementById("copy-btn").textContent = "Copy";
+      document.getElementById("copy-btn").classList.remove("copied");
+      document.getElementById("modal-overlay").classList.add("open");
 
-    try {
-      if (!allNews.length) throw new Error("No articles loaded yet.");
-      const res  = await fetch("/api/snapshot", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify(allNews),
+      try {
+        if (!allNews.length) throw new Error("No articles loaded yet.");
+        const res = await fetch("/api/snapshot", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(allNews),
+        });
+        const data = await res.json();
+        if (data.status !== "success") throw new Error(data.message);
+
+        document.getElementById("export-url").textContent = data.url;
+        document.getElementById("open-link").href = data.url;
+        document.getElementById("modal-generating").style.display = "none";
+        document.getElementById("modal-result").style.display = "block";
+      } catch (err) {
+        document.getElementById("modal-generating").innerHTML =
+          `<span style="color:#c53030">Error: ${err.message}</span>`;
+      }
+    }
+
+    function closeExport() { document.getElementById("modal-overlay").classList.remove("open"); }
+    function closeExportOnBg(e) { if (e.target === document.getElementById("modal-overlay")) closeExport(); }
+
+    function copyUrl() {
+      navigator.clipboard.writeText(document.getElementById("export-url").textContent).then(() => {
+        const btn = document.getElementById("copy-btn");
+        btn.textContent = "Copied!";
+        btn.classList.add("copied");
+        setTimeout(() => { btn.textContent = "Copy"; btn.classList.remove("copied"); }, 2000);
       });
-      const data = await res.json();
-      if (data.status !== "success") throw new Error(data.message);
-
-      document.getElementById("export-url").textContent     = data.url;
-      document.getElementById("open-link").href             = data.url;
-      document.getElementById("modal-generating").style.display = "none";
-      document.getElementById("modal-result").style.display    = "block";
-    } catch (err) {
-      document.getElementById("modal-generating").innerHTML =
-        `<span style="color:#c53030">Error: ${err.message}</span>`;
     }
-  }
 
-  function closeExport() { document.getElementById("modal-overlay").classList.remove("open"); }
-  function closeExportOnBg(e) { if (e.target === document.getElementById("modal-overlay")) closeExport(); }
-
-  function copyUrl() {
-    navigator.clipboard.writeText(document.getElementById("export-url").textContent).then(() => {
-      const btn = document.getElementById("copy-btn");
-      btn.textContent = "Copied!";
-      btn.classList.add("copied");
-      setTimeout(() => { btn.textContent = "Copy"; btn.classList.remove("copied"); }, 2000);
-    });
-  }
-
-  loadNews();
-</script>
+    loadNews();
+  </script>
 </body>
+
 </html>
