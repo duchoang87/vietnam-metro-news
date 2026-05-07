@@ -546,19 +546,24 @@
         ? "Metro" : "Railway";
     }
 
-    function locate(title) {
+    function locate(title, lang) {
       const t = title.toLowerCase();
       if (["ho chi minh", "hcmc", "saigon", "sài gòn", "tphcm", "tp.hcm", "bến thành", "suối tiến"]
         .some(k => t.includes(k))) return "Ho Chi Minh City";
       if (["hanoi", "hà nội", "cát linh", "nhổn"].some(k => t.includes(k))) return "Hanoi";
       if (["đà nẵng", "da nang"].some(k => t.includes(k))) return "Da Nang";
-      return "Vietnam";
+      if (["hải phòng", "hai phong"].some(k => t.includes(k))) return "Hai Phong";
+      if (["quảng ninh", "quang ninh"].some(k => t.includes(k))) return "Quang Ninh";
+      if (["đồng nai", "dong nai"].some(k => t.includes(k))) return "Dong Nai";
+      // EN articles about other countries should not default to Vietnam
+      return lang === "en" ? "International" : "Vietnam";
     }
 
     function ageAgo(dateStr) {
       if (!dateStr) return "";
       const d = new Date(dateStr);
-      if (isNaN(d)) return "";
+      // Reject epoch-like dates (AIIB/ADB sometimes publish with missing pubDate → parsed as ~1970)
+      if (isNaN(d) || d.getFullYear() < 2000) return "";
       const s = Math.floor((Date.now() - d) / 1000);
       if (s < 3600) { const m = Math.max(1, Math.floor(s / 60)); return `${m} minute${m !== 1 ? "s" : ""} ago`; }
       if (s < 86400) { const h = Math.floor(s / 3600); return `${h} hour${h !== 1 ? "s" : ""} ago`; }
@@ -720,7 +725,7 @@
           date: formatDate(a.pubDate),
           age: ageAgo(a.pubDate),
           category: categorize(a.title),
-          location: locate(a.title),
+          location: locate(a.title, a.lang),
         }));
 
         // Sort newest-first
