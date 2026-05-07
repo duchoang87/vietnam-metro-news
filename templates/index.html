@@ -646,7 +646,7 @@
       const btn = document.getElementById("refresh-btn");
       btn.disabled = true;
       document.getElementById("status").innerHTML =
-        `<div class="spinner"></div><p>Đồng chí đợi chút nhé, đang đi lấy tin… ☕</p>`;
+        `<div class="spinner"></div><p>Fetching news from ${FEEDS.length} sources…</p>`;
       document.getElementById("status").style.display = "block";
       document.getElementById("app").style.display = "none";
 
