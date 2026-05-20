@@ -500,8 +500,10 @@
       // ---- Báo tổng hợp — thời sự & kinh tế (VI) ----
       { url: "https://vnexpress.net/rss/thoi-su.rss", lang: "vi", src: "VnExpress" },
       { url: "https://vnexpress.net/rss/kinh-te.rss", lang: "vi", src: "VnExpress" },
+      { url: "https://vnexpress.net/rss/tin-moi-nhat.rss", lang: "vi", src: "VnExpress" },
       { url: "https://tuoitre.vn/rss/thoi-su.rss", lang: "vi", src: "Tuổi Trẻ" },
       { url: "https://tuoitre.vn/rss/kinh-te.rss", lang: "vi", src: "Tuổi Trẻ" },
+      { url: "https://tuoitre.vn/rss/tin-moi-nhat.rss", lang: "vi", src: "Tuổi Trẻ" },
       { url: "https://thanhnien.vn/rss/home.rss", lang: "vi", src: "Thanh Niên" },
       { url: "https://vtv.vn/trong-nuoc.rss", lang: "vi", src: "VTV" },
       { url: "https://dantri.com.vn/xa-hoi.rss", lang: "vi", src: "Dân Trí" },
@@ -510,6 +512,10 @@
       { url: "https://cafef.vn/home.rss", lang: "vi", src: "CafeF" },
       { url: "https://baodautu.vn/trang-chu.rss", lang: "vi", src: "Báo Đầu Tư" },
       { url: "https://kinhtedothi.vn/rss.rss", lang: "vi", src: "KT&ĐT" },
+      { url: "https://vneconomy.vn/dau-tu.rss", lang: "vi", src: "VnEconomy" },
+      { url: "https://vneconomy.vn/tai-chinh.rss", lang: "vi", src: "VnEconomy" },
+      { url: "https://vietnamnet.vn/rss/thoi-su.rss", lang: "vi", src: "VietNamNet" },
+      { url: "https://vietnamnet.vn/rss/kinh-doanh.rss", lang: "vi", src: "VietNamNet" },
       // ---- Báo chính phủ / nhà nước (VI) ----
       { url: "https://baochinhphu.vn/rss/", lang: "vi", src: "Báo CP" },
       // ---- Báo địa phương — các tỉnh/thành có dự án metro & đường sắt (VI) ----
@@ -528,16 +534,24 @@
       { url: "https://www.adb.org/news.rss", lang: "en", src: "ADB" },
     ];
 
-    const MAX_VI = 20;
-    const MAX_EN = 10;
+    const MAX_VI = 35;
+    const MAX_EN = 15;
 
     const VI_KW = [
-      "metro", "mrt", "tàu điện",
-      "đường sắt", "tốc độ cao", "đường ray", "đường sắt cao tốc", "đường sắt đô thị",
+      // General keywords
+      "metro", "mrt", "tàu điện", "đường sắt", "đường ray", "tàu hỏa", "ga ngầm", "ga metro", "ga tàu điện", "toa tàu điện",
+      "đường sắt đô thị", "đường sắt tốc độ cao", "đường sắt cao tốc",
+      // Specific route/project names (compound keywords to prevent false positives like amusement parks or general location news)
+      "bến thành - suối tiên", "bến thành-suối tiên",
+      "cát linh - hà đông", "cát linh-hà đông",
+      "nhổn - ga hà nội", "nhổn-ga hà nội",
+      "ga bến thành", "ga suối tiên", "ga cát linh", "ga nhổn", "ga ba son", "ga nhà hát thành phố",
+      "tuyến số 1", "tuyến số 2", "tuyến số 3a", "tuyến số 5", "tuyến số 8"
     ];
     const EN_KW = [
-      "metro", "railway", "rail line", "rail project", "rail network",
-      "high-speed rail", "high speed rail", "mrt", "metro line", "metro station",
+      "metro", "railway", "rail line", "rail project", "rail network", "high-speed rail", "high speed rail", "mrt", "metro line", "metro station",
+      "subway", "ben thanh - suoi tien", "ben thanh-suoi tien", "cat linh - ha dong", "cat linh-ha dong", "nhon - ha noi station", "nhon-ha noi station",
+      "ben thanh station", "suoi tien station", "ba son station", "underground station"
     ];
 
     // -------------------------------------------------------------------------
@@ -559,7 +573,7 @@
     function categorize(title) {
       const t = title.toLowerCase();
       return ["metro", "mrt", "bến thành", "suối tiên", "nhổn", "cát linh",
-        "tàu điện", "đường sắt đô thị"].some(k => t.includes(k))
+        "tàu điện", "đường sắt đô thị", "ga ngầm", "ga metro", "ba son", "tuyến số"].some(k => t.includes(k))
         ? "Metro" : "Railway";
     }
 

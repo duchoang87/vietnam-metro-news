@@ -39,6 +39,8 @@ _ALLOWED_HOSTS = {
     "kinhtedothi.vn",
     "laodong.vn",
     "ndh.vn",
+    "vneconomy.vn",
+    "vietnamnet.vn",
     # Vietnamese government
     "baochinhphu.vn",
     "chinhphu.vn",
