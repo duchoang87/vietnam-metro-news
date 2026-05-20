@@ -1,9 +1,14 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Tổng hợp tin tức Metro & Đường sắt Việt Nam từ hơn 25 nguồn báo uy tín. Cập nhật liên tục." />
+  <meta property="og:title" content="Vietnam Metro & Railway News" />
+  <meta property="og:description" content="Tổng hợp tin tức Metro & Đường sắt Việt Nam từ hơn 25 nguồn báo uy tín." />
+  <meta property="og:type" content="website" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚇</text></svg>" />
   <title>Vietnam Metro & Railway News</title>
   <style>
     *,
@@ -44,6 +49,7 @@
       max-width: 1000px;
       margin: 0 auto;
       padding: 28px 16px;
+      position: relative;
     }
 
     .toolbar {
@@ -268,6 +274,41 @@
       }
     }
 
+    /* Refresh overlay — keeps old content visible behind a translucent spinner */
+    .refresh-overlay {
+      display: none;
+      position: absolute;
+      inset: 0;
+      background: rgba(240, 244, 248, 0.8);
+      z-index: 50;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 10px;
+      border-radius: 8px;
+    }
+
+    .refresh-overlay.active {
+      display: flex;
+    }
+
+    .refresh-overlay p {
+      color: #718096;
+      font-size: 0.88rem;
+    }
+
+    /* Feed status warning */
+    .feed-warning {
+      text-align: center;
+      padding: 8px 16px;
+      background: #fffbeb;
+      border: 1px solid #fbbf24;
+      border-radius: 6px;
+      color: #92400e;
+      font-size: 0.8rem;
+      margin-bottom: 16px;
+    }
+
     /* Grid */
     .grid {
       display: grid;
@@ -391,10 +432,11 @@
   <main>
     <div id="status">
       <div class="spinner"></div>
-      <p>Fetching latest news…</p>
+      <p>Đồng chí chờ chút, mình đang đi tìm tin... ☕</p>
     </div>
 
     <div id="app" style="display:none">
+      <div id="feed-warning" class="feed-warning" style="display:none"></div>
       <div class="toolbar">
         <div class="filters" id="filters"></div>
         <div style="display:flex;gap:10px;align-items:center">
@@ -404,6 +446,12 @@
         </div>
       </div>
       <div class="grid" id="grid"></div>
+    </div>
+
+    <!-- Refresh overlay — shows on top of existing content -->
+    <div class="refresh-overlay" id="refresh-overlay">
+      <div class="spinner"></div>
+      <p>Đang cập nhật tin mới...</p>
     </div>
   </main>
 
@@ -496,6 +544,13 @@
     // Helpers
     // -------------------------------------------------------------------------
 
+    /** Escape HTML entities to prevent XSS when inserting titles into DOM */
+    function escHtml(str) {
+      const el = document.createElement("span");
+      el.textContent = str;
+      return el.innerHTML;
+    }
+
     function isRelevant(title, lang) {
       const t = title.toLowerCase();
       return (lang === "vi" ? VI_KW : EN_KW).some(kw => t.includes(kw));
@@ -503,14 +558,14 @@
 
     function categorize(title) {
       const t = title.toLowerCase();
-      return ["metro", "mrt", "bến thành", "suối tiến", "nhổn", "cát linh",
+      return ["metro", "mrt", "bến thành", "suối tiên", "nhổn", "cát linh",
         "tàu điện", "đường sắt đô thị"].some(k => t.includes(k))
         ? "Metro" : "Railway";
     }
 
     function locate(title) {
       const t = title.toLowerCase();
-      if (["ho chi minh", "hcmc", "saigon", "sài gòn", "tphcm", "tp.hcm", "bến thành", "suối tiến"]
+      if (["ho chi minh", "hcmc", "saigon", "sài gòn", "tphcm", "tp.hcm", "bến thành", "suối tiên"]
         .some(k => t.includes(k))) return "Ho Chi Minh City";
       if (["hanoi", "hà nội", "cát linh", "nhổn"].some(k => t.includes(k))) return "Hanoi";
       if (["đà nẵng", "da nang"].some(k => t.includes(k))) return "Da Nang";
@@ -538,15 +593,27 @@
     // RSS fetch via Flask proxy (/proxy?url=...)
     // -------------------------------------------------------------------------
 
+    /** Create an AbortSignal that times out — with fallback for older browsers */
+    function timeoutSignal(ms) {
+      if (typeof AbortSignal.timeout === "function") {
+        return AbortSignal.timeout(ms);
+      }
+      // Fallback: manual AbortController + setTimeout
+      const ctrl = new AbortController();
+      setTimeout(() => ctrl.abort(), ms);
+      return ctrl.signal;
+    }
+
     async function fetchFeed(feed) {
       try {
         const res = await fetch(RSS_PROXY + encodeURIComponent(feed.url),
-          { signal: AbortSignal.timeout(15000) });
-        if (!res.ok) return [];
+          { signal: timeoutSignal(15000) });
+        if (!res.ok) return { items: [], ok: false };
         const xmlText = await res.text();
-        return parseItems(xmlText, feed);
+        const items = parseItems(xmlText, feed);
+        return { items, ok: true };
       } catch (_) {
-        return [];
+        return { items: [], ok: false };
       }
     }
 
@@ -558,10 +625,25 @@
         return [...doc.querySelectorAll("item")].map(item => {
           const title = item.querySelector("title")?.textContent?.trim() || "";
           const pubDate = item.querySelector("pubDate")?.textContent?.trim() || "";
-          // <link> in RSS is often a text node (not an attribute)
+
+          // Robust <link> extraction:
+          // 1. Try <link> text content (standard RSS)
+          // 2. Try <link href="..."> attribute (Atom style)
+          // 3. Some feeds put link in CDATA or have extra whitespace/newlines
           let link = "";
           const linkEl = item.querySelector("link");
-          if (linkEl) link = linkEl.textContent?.trim() || linkEl.getAttribute("href") || "";
+          if (linkEl) {
+            link = (linkEl.textContent || "").trim();
+            if (!link) link = linkEl.getAttribute("href") || "";
+          }
+          // Fallback: try <guid> if it looks like a URL
+          if (!link) {
+            const guid = item.querySelector("guid")?.textContent?.trim() || "";
+            if (guid.startsWith("http")) link = guid;
+          }
+          // Clean up any remaining whitespace/newlines in link
+          link = link.replace(/\s+/g, "").trim();
+
           return { title, link, pubDate, source: feed.src, lang: feed.lang };
         }).filter(a => a.title && isRelevant(a.title, feed.lang));
       } catch (_) {
@@ -576,6 +658,7 @@
     const CATS = ["All", "Metro", "Railway"];
     let activeCat = "All";
     let allNews = [];
+    let isFirstLoad = true;
 
     function tagClass(cat) { return "tag-" + cat; }
 
@@ -588,6 +671,9 @@
     function setFilter(cat) { activeCat = cat; renderFilters(); applyFilter(); }
 
     function applyFilter() {
+      // Remove any previous "no results" messages first
+      document.querySelectorAll(".no-results").forEach(el => el.remove());
+
       document.querySelectorAll(".card").forEach(card => {
         card.classList.toggle("hidden", activeCat !== "All" && card.dataset.cat !== activeCat);
       });
@@ -598,9 +684,10 @@
     }
 
     function renderCard(item) {
+      const safeTitle = escHtml(item.title);
       const titleHtml = item.link
-        ? `<a href="${item.link}" target="_blank" rel="noopener">${item.title}</a>`
-        : item.title;
+        ? `<a href="${escHtml(item.link)}" target="_blank" rel="noopener">${safeTitle}</a>`
+        : safeTitle;
       return `
       <div class="card" data-cat="${item.category}">
         <div class="card-tag ${tagClass(item.category)}">
@@ -610,8 +697,8 @@
         <div class="card-body">
           <div class="card-title">${titleHtml}</div>
           <div class="card-meta">
-            <span class="loc">📍 ${item.location}</span>
-            <span>${item.source ? item.source + " · " : ""}${item.age || item.date}</span>
+            <span class="loc">📍 ${escHtml(item.location)}</span>
+            <span>${item.source ? escHtml(item.source) + " · " : ""}${item.age || item.date}</span>
           </div>
         </div>
       </div>`;
@@ -620,15 +707,35 @@
     async function loadNews() {
       const btn = document.getElementById("refresh-btn");
       btn.disabled = true;
-      document.getElementById("status").innerHTML =
-        `<div class="spinner"></div><p>Fetching news from ${FEEDS.length} sources…</p>`;
-      document.getElementById("status").style.display = "block";
-      document.getElementById("app").style.display = "none";
+
+      if (isFirstLoad) {
+        // First load: show full-page spinner
+        document.getElementById("status").innerHTML =
+          `<div class="spinner"></div><p>Đồng chí chờ chút, mình đang đi tìm tin... ☕</p>`;
+        document.getElementById("status").style.display = "block";
+        document.getElementById("app").style.display = "none";
+      } else {
+        // Subsequent loads: overlay spinner on top of existing content
+        document.getElementById("refresh-overlay").classList.add("active");
+      }
 
       try {
         // Parallel fetch across all feeds (different servers — no rate-limit risk)
         const results = await Promise.allSettled(FEEDS.map(fetchFeed));
-        const flat = results.flatMap(r => r.status === "fulfilled" ? r.value : []);
+
+        let feedOk = 0;
+        let feedFail = 0;
+        const flat = [];
+
+        results.forEach(r => {
+          if (r.status === "fulfilled") {
+            if (r.value.ok) feedOk++;
+            else feedFail++;
+            flat.push(...r.value.items);
+          } else {
+            feedFail++;
+          }
+        });
 
         // Deduplicate by title prefix
         const seen = new Set();
@@ -651,10 +758,11 @@
         // Sort newest-first
         enriched.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
 
-        // Cap VI + EN separately
+        // Cap VI + EN separately, then re-sort combined list
         const vi = enriched.filter(a => a.lang === "vi").slice(0, MAX_VI);
         const en = enriched.filter(a => a.lang === "en").slice(0, MAX_EN);
         allNews = [...vi, ...en];
+        allNews.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
 
         if (!allNews.length) throw new Error("No relevant articles found. Try again later.");
 
@@ -662,15 +770,33 @@
         document.getElementById("meta").textContent =
           `${allNews.length} articles (🇻🇳 ${vi.length} · 🇬🇧 ${en.length}) · updated ${new Date().toLocaleTimeString()}`;
 
+        // Show feed status warning if many feeds failed
+        const warningEl = document.getElementById("feed-warning");
+        if (feedFail > 0 && feedFail > feedOk) {
+          warningEl.textContent = `⚠️ ${feedFail}/${FEEDS.length} feeds không phản hồi — tin có thể chưa đầy đủ.`;
+          warningEl.style.display = "block";
+        } else {
+          warningEl.style.display = "none";
+        }
+
         renderFilters();
         applyFilter();
         document.getElementById("status").style.display = "none";
         document.getElementById("app").style.display = "block";
+        isFirstLoad = false;
       } catch (err) {
-        document.getElementById("status").innerHTML =
-          `<div class="error-box"><strong>Error:</strong> ${err.message}</div>`;
+        if (isFirstLoad) {
+          document.getElementById("status").innerHTML =
+            `<div class="error-box"><strong>Error:</strong> ${escHtml(err.message)}</div>`;
+        } else {
+          // On refresh failure, keep old content and show a brief warning
+          const warningEl = document.getElementById("feed-warning");
+          warningEl.textContent = `⚠️ Refresh failed: ${err.message}`;
+          warningEl.style.display = "block";
+        }
       } finally {
         btn.disabled = false;
+        document.getElementById("refresh-overlay").classList.remove("active");
       }
     }
 
@@ -681,6 +807,8 @@
     async function openExport() {
       document.getElementById("modal-result").style.display = "none";
       document.getElementById("modal-generating").style.display = "block";
+      document.getElementById("modal-generating").innerHTML =
+        `<div class="spinner" style="width:28px;height:28px;border-width:3px;margin-bottom:8px"></div>Creating snapshot…`;
       document.getElementById("copy-btn").textContent = "Copy";
       document.getElementById("copy-btn").classList.remove("copied");
       document.getElementById("modal-overlay").classList.add("open");
@@ -701,7 +829,7 @@
         document.getElementById("modal-result").style.display = "block";
       } catch (err) {
         document.getElementById("modal-generating").innerHTML =
-          `<span style="color:#c53030">Error: ${err.message}</span>`;
+          `<span style="color:#c53030">Error: ${escHtml(err.message)}</span>`;
       }
     }
 

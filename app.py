@@ -90,7 +90,7 @@ def proxy():
     parsed = urllib.parse.urlparse(url)
     hostname = parsed.hostname or ""
     # Strip www. and check against whitelist (also allow subdomains like e.vnexpress.net)
-    host = hostname.lstrip("www.")
+    host = hostname[4:] if hostname.startswith("www.") else hostname
     if host not in _ALLOWED_HOSTS and not any(host.endswith("." + h) for h in _ALLOWED_HOSTS):
         return Response("host not allowed", status=403)
 
@@ -101,7 +101,10 @@ def proxy():
         })
         with urllib.request.urlopen(req, timeout=12) as r:
             content = r.read().decode("utf-8", errors="replace")
-        return Response(content, mimetype="text/xml; charset=utf-8")
+        return Response(content, mimetype="text/xml; charset=utf-8", headers={
+            "Cache-Control": "public, max-age=300",
+            "X-Feed-Host": host,
+        })
     except Exception as e:
         print(f"[proxy] {url[:80]}: {e}")
         return Response(f"fetch error: {e}", status=502)
