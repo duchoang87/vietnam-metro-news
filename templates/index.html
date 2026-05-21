@@ -784,14 +784,8 @@
         document.getElementById("meta").textContent =
           `${allNews.length} articles (🇻🇳 ${vi.length} · 🇬🇧 ${en.length}) · updated ${new Date().toLocaleTimeString()}`;
 
-        // Show feed status warning if many feeds failed
-        const warningEl = document.getElementById("feed-warning");
-        if (feedFail > 0 && feedFail > feedOk) {
-          warningEl.textContent = `⚠️ ${feedFail}/${FEEDS.length} feeds không phản hồi — tin có thể chưa đầy đủ.`;
-          warningEl.style.display = "block";
-        } else {
-          warningEl.style.display = "none";
-        }
+        // Hide feed warning on successful load
+        document.getElementById("feed-warning").style.display = "none";
 
         renderFilters();
         applyFilter();
